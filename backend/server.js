@@ -864,17 +864,15 @@ app.get("/api/surat/:id/download", async (req, res) => {
     return res.status(404).json({ error: "Surat tidak ditemukan" });
   }
 
-  // Jika surat belum ditandatangani resmi, hanya bisa diakses user yang login
-  if (surat.status !== "SUDAH_DITANDATANGANI" && !req.user) {
-    return res.status(401).json({ error: "Perlu login untuk melihat pratinjau draft surat" });
-  }
+  const isDownload = req.query.download === "1" || req.query.download === "true";
+  const disposition = isDownload ? "attachment" : "inline";
 
   // Jika file PDF final ada di disk/cache server
   if (surat.pdfFilename) {
     const filePath = path.join(OUTPUT_DIR, surat.pdfFilename);
     if (fs.existsSync(filePath)) {
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="${surat.pdfFilename}"`);
+      res.setHeader("Content-Disposition", `${disposition}; filename="${surat.pdfFilename}"`);
       return res.sendFile(filePath);
     }
   }
@@ -882,6 +880,21 @@ app.get("/api/surat/:id/download", async (req, res) => {
   // Jika tidak ada di disk atau masih DRAFT/MENUNGGU_TTD, generate on-the-fly PDF
   try {
     const rawData = surat.data || {};
+    const signerName =
+      surat.signedBy ||
+      surat.namaPenandatangan ||
+      rawData.verifier_name ||
+      rawData.nama_penandatangan ||
+      "Penandatangan";
+    const signerJabatan =
+      surat.jabatanPenandatangan ||
+      rawData.jabatan_penandatangan ||
+      "Kepala Bidang";
+    const signerNip =
+      surat.nipPenandatangan ||
+      rawData.nip_penandatangan ||
+      "-";
+
     const templateData = {
       nomor_surat: surat.nomor_surat,
       tempat_surat: rawData.tempat_surat || "Bandar Lampung",
@@ -892,30 +905,37 @@ app.get("/api/surat/:id/download", async (req, res) => {
       tujuan: surat.tujuan,
       lokasi_tujuan: rawData.lokasi_tujuan || "Bandar Lampung",
       isi_surat: rawData.isi_surat || "",
-      jabatan_penandatangan: surat.jabatanPenandatangan || rawData.jabatan_penandatangan || "Kepala Bidang",
-      nama_penandatangan: surat.namaPenandatangan || rawData.nama_penandatangan || "Penandatangan",
-      nip_penandatangan: surat.nipPenandatangan || rawData.nip_penandatangan || "-",
+      jabatan_penandatangan: signerJabatan,
+      nama_penandatangan: signerName,
+      nip_penandatangan: signerNip,
     };
 
     let qrDataUrl = null;
     let verificationUrl = null;
-    if (surat.status === "SUDAH_DITANDATANGANI" && surat.verificationToken) {
+    const isDraft = surat.status !== "SUDAH_DITANDATANGANI";
+
+    if (!isDraft) {
+      let token = surat.verificationToken;
+      if (!token) {
+        token = crypto.randomUUID();
+        store.updateHistoryEntry(surat.id, { verificationToken: token }).catch(console.error);
+      }
       const baseUrl = process.env.APP_BASE_URL || `${req.protocol}://${req.get("host")}`;
-      verificationUrl = `${baseUrl.replace(/\/+$/, "")}/#/verify/${surat.verificationToken}`;
+      verificationUrl = `${baseUrl.replace(/\/+$/, "")}/#/verify/${token}`;
       const qrBuf = await generateQrCodeBuffer(verificationUrl);
       qrDataUrl = `data:image/png;base64,${qrBuf.toString("base64")}`;
     }
 
-    const isDraft = surat.status !== "SUDAH_DITANDATANGANI";
     const pdfBuf = await generateSuratPdf(templateData, {
       qrDataUrl,
       verificationUrl,
       isDraft,
     });
 
-    const pdfName = surat.pdfFilename || (isDraft ? `Draft_${surat.id.slice(0, 8)}.pdf` : `Surat_${surat.id.slice(0, 8)}.pdf`);
-    const isDownload = req.query.download === "1" || req.query.download === "true";
-    const disposition = isDownload ? "attachment" : "inline";
+    const pdfName =
+      surat.pdfFilename ||
+      (isDraft ? `Draft_${surat.id.slice(0, 8)}.pdf` : `Surat_Resmi_${surat.id.slice(0, 8)}.pdf`);
+
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `${disposition}; filename="${pdfName}"`);
     return res.send(pdfBuf);

@@ -214,7 +214,7 @@ export default function DashboardPage({ user, onLogout, theme, onToggleTheme, on
             }}
           />
         )}
-        {activeTab === 'verifikasi' && <VerifikasiTab user={user} />}
+        {activeTab === 'verifikasi' && <VerifikasiTab user={user} onOpenVerify={onOpenVerify} />}
         {activeTab === 'riwayat' && (
           <RiwayatTab
             user={user}

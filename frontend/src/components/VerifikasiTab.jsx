@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { getHistory, approveSurat, rejectSurat, getPdfDownloadUrl } from '../utils/api'
 
-export default function VerifikasiTab({ user }) {
+export default function VerifikasiTab({ user, onOpenVerify }) {
+  const [subTab, setSubTab] = useState('MENUNGGU_TTD') // 'MENUNGGU_TTD' | 'SUDAH_DITANDATANGANI'
   const [letters, setLetters] = useState([])
+  const [signedLetters, setSignedLetters] = useState([])
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
   const [message, setMessage] = useState({ text: '', type: '' })
@@ -31,9 +33,25 @@ export default function VerifikasiTab({ user }) {
     }
   }, [])
 
+  const loadSignedLetters = useCallback(async () => {
+    setLoading(true)
+    try {
+      const data = await getHistory(1, 50, 'SUDAH_DITANDATANGANI')
+      setSignedLetters(data.history || [])
+    } catch (err) {
+      console.error('Gagal memuat surat yang sudah ditandatangani:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
-    loadPendingLetters()
-  }, [loadPendingLetters])
+    if (subTab === 'MENUNGGU_TTD') {
+      loadPendingLetters()
+    } else {
+      loadSignedLetters()
+    }
+  }, [subTab, loadPendingLetters, loadSignedLetters])
 
   // ---------- Modal Setujui (Approval) Handlers ----------
   const openApproveModal = (surat) => {
@@ -126,7 +144,124 @@ export default function VerifikasiTab({ user }) {
         </div>
       )}
 
-      {loading ? (
+      {/* Subtab Selector */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 18, borderBottom: '1px solid var(--glass-border)', paddingBottom: 10 }}>
+        <button
+          type="button"
+          className={`btn ${subTab === 'MENUNGGU_TTD' ? 'btn-primary' : 'btn-ghost'} btn-sm`}
+          onClick={() => setSubTab('MENUNGGU_TTD')}
+        >
+          ⏳ Menunggu Persetujuan ({letters.length})
+        </button>
+        <button
+          type="button"
+          className={`btn ${subTab === 'SUDAH_DITANDATANGANI' ? 'btn-primary' : 'btn-ghost'} btn-sm`}
+          onClick={() => setSubTab('SUDAH_DITANDATANGANI')}
+        >
+          ✅ Sudah Ditandatangani / Hasil Resmi ({signedLetters.length})
+        </button>
+      </div>
+
+      {subTab === 'SUDAH_DITANDATANGANI' ? (
+        loading ? (
+          <div className="empty-state">Memuat data surat resmi...</div>
+        ) : signedLetters.length === 0 ? (
+          <div className="empty-state">Belum ada surat yang ditandatangani.</div>
+        ) : (
+          <div className="table-wrap">
+            <table className="table-history">
+              <thead>
+                <tr>
+                  <th style={{ width: '220px' }}>Nomor Surat</th>
+                  <th style={{ minWidth: '180px' }}>Hal / Perihal</th>
+                  <th style={{ minWidth: '160px' }}>Tujuan</th>
+                  <th style={{ width: '130px' }}>Pembuat</th>
+                  <th style={{ width: '150px' }}>Penandatangan</th>
+                  <th style={{ width: '110px' }}>Tanggal</th>
+                  <th style={{ width: '220px', textAlign: 'center' }}>Surat Hasil Resmi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {signedLetters.map((s) => (
+                  <tr key={s.id}>
+                    <td>
+                      <span className="nomor-surat-pill">{s.nomor_surat}</span>
+                    </td>
+                    <td>
+                      <div className="text-hal">{s.hal}</div>
+                    </td>
+                    <td>
+                      <div className="text-tujuan">{s.tujuan}</div>
+                    </td>
+                    <td>
+                      <span className="badge badge-staff">{s.dibuatOleh}</span>
+                      {s.branchName && (
+                        <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          {s.branchName}
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 600, fontSize: '12.5px' }}>
+                        {s.signedBy || s.namaPenandatangan || '-'}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                        {s.jabatanPenandatangan || 'Kepala Bidang'}
+                      </div>
+                    </td>
+                    <td>
+                      <span className="date-text">{s.tanggal}</span>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <div style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
+                        <a
+                          href={getPdfDownloadUrl(s.id)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-primary btn-sm"
+                          title="Buka dan lihat surat hasil resmi yang sudah ditandatangani"
+                        >
+                          👁️ Buka Hasil PDF
+                        </a>
+                        <a
+                          href={getPdfDownloadUrl(s.id, true)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-ghost btn-sm"
+                          title="Unduh berkas fisik PDF resmi"
+                        >
+                          ⬇️ Unduh
+                        </a>
+                        {s.driveUrl && (
+                          <a
+                            href={s.driveUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="badge-drive"
+                            title="Buka berkas di Google Drive"
+                          >
+                            ☁️ Drive
+                          </a>
+                        )}
+                        {s.verificationToken && (
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => onOpenVerify && onOpenVerify(s.verificationToken)}
+                            title="Cek keaslian surat via QR Code"
+                          >
+                            Verifikasi
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+      ) : loading ? (
         <div className="empty-state">Memuat data surat...</div>
       ) : letters.length === 0 ? (
         <div className="empty-state">Tidak ada surat yang sedang menunggu verifikasi atau tanda tangan.</div>

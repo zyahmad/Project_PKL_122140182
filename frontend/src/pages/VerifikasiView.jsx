@@ -24,6 +24,8 @@ export default function VerifikasiView({ token, onBack, user }) {
       })
   }, [token])
 
+  const [showPreview, setShowPreview] = useState(false)
+
   return (
     <div style={{ maxWidth: 760, margin: '20px auto', padding: '0 12px', position: 'relative', zIndex: 1 }}>
       <div className="glass form-card">
@@ -147,28 +149,61 @@ export default function VerifikasiView({ token, onBack, user }) {
               </div>
             </div>
 
-            <div style={{ marginTop: 24, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ marginTop: 24, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
               <a
                 href={getPdfDownloadUrl(data.id)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-primary"
-                style={{ textDecoration: 'none' }}
+                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                title="Buka dan lihat surat hasil yang sudah ditandatangani"
               >
-                Unduh PDF Resmi
+                👁️ Tampilkan Surat Hasil (Buka PDF)
+              </a>
+              <a
+                href={getPdfDownloadUrl(data.id, true)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-ghost"
+                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                title="Unduh berkas fisik PDF resmi"
+              >
+                ⬇️ Unduh PDF Resmi
               </a>
               {data.drive_url && (
                 <a
                   href={data.drive_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn btn-ghost"
-                  style={{ textDecoration: 'none' }}
+                  className="badge-drive"
+                  style={{ textDecoration: 'none', padding: '8px 14px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  title="Lihat berkas resmi di Google Drive"
                 >
-                  Buka di Google Drive
+                  ☁️ Buka di Google Drive
                 </a>
               )}
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setShowPreview((prev) => !prev)}
+                style={{ marginLeft: 'auto', fontSize: '12.5px' }}
+                title="Buka pratinjau naskah langsung di halaman ini"
+              >
+                {showPreview ? '▲ Sembunyikan Dokumen' : '📄 Pratinjau di Halaman'}
+              </button>
             </div>
+
+            {showPreview && (
+              <div style={{ marginTop: 18, border: '1px solid var(--glass-border)', borderRadius: '10px', overflow: 'hidden', height: '650px', background: '#3b3e40', boxShadow: '0 8px 30px rgba(0,0,0,0.2)' }}>
+                <iframe
+                  src={getPdfDownloadUrl(data.id)}
+                  title="Pratinjau Surat Resmi"
+                  width="100%"
+                  height="100%"
+                  style={{ border: 'none', display: 'block' }}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
