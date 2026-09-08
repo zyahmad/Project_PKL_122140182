@@ -1,6 +1,5 @@
 const fs = require("fs");
 const path = require("path");
-const puppeteer = require("puppeteer-core");
 
 // Path ke logo resmi Kemenag
 const LOGO_PATH = path.join(__dirname, "..", "templates", "kemenag_logo.png");
@@ -66,8 +65,12 @@ async function launchBrowser() {
     process.env.AWS_EXECUTION_ENV
   );
 
+  const puppeteerMod = await import("puppeteer-core");
+  const puppeteer = puppeteerMod.default || puppeteerMod;
+
   if (isServerless) {
-    const chromium = require("@sparticuz/chromium");
+    const chromiumMod = await import("@sparticuz/chromium").catch(() => require("@sparticuz/chromium"));
+    const chromium = chromiumMod.default || chromiumMod;
     return await puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
