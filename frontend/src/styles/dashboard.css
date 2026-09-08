@@ -43,6 +43,15 @@
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
 
+.brand-icon-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.18));
+  flex-shrink: 0;
+}
+
 .brand h1 {
   font-size: 16px;
   font-weight: 700;
@@ -657,7 +666,8 @@
     gap: 8px;
   }
 
-  .brand-icon {
+  .brand-icon,
+  .brand-icon-logo {
     width: 28px;
     height: 28px;
     font-size: 13px;

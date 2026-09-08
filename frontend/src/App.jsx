@@ -3,6 +3,7 @@ import { getMe } from './utils/api'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import VerifikasiView from './pages/VerifikasiView'
+import kemenagLogo from './assets/kemenag_logo.png'
 
 function BgOrbs() {
   return (
@@ -78,8 +79,8 @@ export default function App() {
         <div style={{ minHeight: '100vh', position: 'relative', zIndex: 1 }}>
           <header className="app-header">
             <div className="brand">
-              <div className="brand-icon">S</div>
-              <h1>Sistem Verifikasi Surat Resmi</h1>
+              <img src={kemenagLogo} alt="Logo Kemenag" className="brand-icon-logo" />
+              <h1>Sistem Verifikasi Surat Resmi Bidang PAPKI</h1>
             </div>
             <div className="header-right">
               <button

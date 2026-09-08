@@ -6,6 +6,7 @@ import SuratMasukTab from '../components/SuratMasukTab'
 import VerifikasiTab from '../components/VerifikasiTab'
 import UsersTab from '../components/UsersTab'
 import PenandatanganTab from '../components/PenandatanganTab'
+import kemenagLogo from '../assets/kemenag_logo.png'
 import '../styles/dashboard.css'
 
 const ALL_TABS = [
@@ -55,8 +56,8 @@ export default function DashboardPage({ user, onLogout, theme, onToggleTheme, on
         {/* Header */}
         <header className="app-header">
           <div className="brand">
-            <div className="brand-icon">S</div>
-            <h1>Sistem Pembuat Surat</h1>
+            <img src={kemenagLogo} alt="Logo Kemenag" className="brand-icon-logo" />
+            <h1>Sistem Pembuat Surat Bidang PAPKI</h1>
           </div>
           <div className="header-right">
             {/* Toggle Theme Icon */}

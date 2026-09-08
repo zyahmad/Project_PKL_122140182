@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { login } from '../utils/api'
+import kemenagLogo from '../assets/kemenag_logo.png'
 import '../styles/login.css'
 
 export default function LoginPage({ onLogin, theme, onToggleTheme }) {
@@ -29,8 +30,15 @@ export default function LoginPage({ onLogin, theme, onToggleTheme }) {
             {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
           </button>
         </div>
-        <h1>Masuk ke Akun</h1>
-        <p className="subtitle">Sistem Pembuat Surat Rekomendasi</p>
+        <div style={{ textAlign: 'center', marginBottom: 12 }}>
+          <img
+            src={kemenagLogo}
+            alt="Logo Kemenag"
+            style={{ width: 68, height: 68, objectFit: 'contain', display: 'inline-block', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.18))' }}
+          />
+        </div>
+        <h1 style={{ textAlign: 'center', marginTop: 4 }}>Masuk ke Akun</h1>
+        <p className="subtitle" style={{ textAlign: 'center', fontWeight: 600 }}>Sistem Pembuat Surat Bidang PAPKI</p>
         <form onSubmit={handleSubmit}>
           <div className="field">
             <label className="label">Username</label>

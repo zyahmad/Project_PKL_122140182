@@ -56,8 +56,10 @@ function getFolderId() {
  * Mendapatkan ID Folder khusus Draft surat di Google Drive
  */
 function getDraftFolderId() {
+  const config = getDriveConfig();
   return process.env.GOOGLE_DRIVE_FOLDER_DRAFT_ID || 
          process.env.GOOGLE_DRIVE_DRAFT_FOLDER_ID || 
+         config.draftFolderId ||
          '1XCM0iYYbVY_Dyilz4xBvscVTKlNT9Mxw';
 }
 
@@ -65,8 +67,10 @@ function getDraftFolderId() {
  * Mendapatkan ID Folder khusus Surat Resmi (Sudah TTD) di Google Drive
  */
 function getSignedFolderId() {
+  const config = getDriveConfig();
   return process.env.GOOGLE_DRIVE_FOLDER_SIGNED_ID || 
          process.env.GOOGLE_DRIVE_FOLDER_ID || 
+         config.signedFolderId ||
          getFolderId() ||
          '15eoUcYIaYiUYmaqzZXCm4oQRC6cBgeHO';
 }
