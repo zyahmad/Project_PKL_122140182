@@ -239,12 +239,33 @@ export default function SuratMasukTab({ user, onOpenVerify }) {
                             href={getPdfDownloadUrl(item.suratId)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="badge-drive"
-                            title="Unduh Salinan Resmi PDF"
+                            className="btn btn-ghost btn-sm"
+                            title="Buka PDF di tab baru"
+                          >
+                            👁️ Buka
+                          </a>
+                          <a
+                            href={getPdfDownloadUrl(item.suratId, true)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-ghost btn-sm"
+                            title="Unduh file PDF"
                             onClick={() => handleDownload(item)}
                           >
-                            Unduh PDF
+                            ⬇️ Unduh
                           </a>
+
+                          {(s.driveUrl || s.drive_url) && (
+                            <a
+                              href={s.driveUrl || s.drive_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="badge-drive"
+                              title="Buka dokumen di Google Drive"
+                            >
+                              ☁️ Drive
+                            </a>
+                          )}
 
                           {verificationToken && (
                             <button

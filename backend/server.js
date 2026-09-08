@@ -8,7 +8,7 @@ const path = require("path");
 const os = require("os");
 const store = require("./store");
 const db = require("./db");
-const { uploadPdfToDrive, getOAuth2Client, getDriveConfig, sanitizeDriveCredentials, CONFIG_PATH } = require("./drive");
+const { uploadPdfToDrive, getOAuth2Client, getDriveConfig, getDraftFolderId, getSignedFolderId, sanitizeDriveCredentials, CONFIG_PATH } = require("./drive");
 const { generateQrCodeBuffer, calculateSha256, TRANSPARENT_1X1_PNG } = require("./signer");
 const { generateSuratPdf } = require("./services/pdfGenerator");
 const {
@@ -574,9 +574,33 @@ app.post("/api/surat/:id/send", requireAuth, requireAdmin, async (req, res) => {
     return res.status(400).json({ error: "Field surat belum lengkap untuk dikirim ke Kepala Bidang", missing });
   }
 
+  // 1. Upload file Draft ke Google Drive folder draft (jika Google Drive terhubung)
+  let draftDriveResult = null;
+  try {
+    const draftPdfBytes = await generateSuratPdf(mergedData, { isDraft: true });
+    const cleanNomor = (mergedData.nomor_surat || "Draft").replace(/[/\\?%*:|"<>]/g, "_");
+    const draftPdfName = `Draft_${cleanNomor}_${Date.now()}.pdf`;
+    const draftPdfPath = path.join(OUTPUT_DIR, draftPdfName);
+    try { fs.writeFileSync(draftPdfPath, draftPdfBytes); } catch {}
+
+    draftDriveResult = await uploadPdfToDrive(draftPdfPath, draftPdfName, getDraftFolderId());
+    try { if (fs.existsSync(draftPdfPath)) fs.unlinkSync(draftPdfPath); } catch {}
+  } catch (dErr) {
+    console.warn("⚠️ [Drive Draft Upload] Gagal upload draft ke Google Drive:", dErr.message);
+  }
+
+  const updatedData = {
+    ...data,
+    ...(draftDriveResult ? {
+      draft_drive_url: draftDriveResult.webViewLink,
+      draft_drive_file_id: draftDriveResult.fileId,
+    } : {}),
+  };
+
   const updated = await store.updateHistoryEntry(req.params.id, {
     status: "MENUNGGU_TTD",
     alasanPenolakan: null,
+    data: updatedData,
   });
 
   res.json({ ok: true, surat: updated });
@@ -645,10 +669,10 @@ app.post("/api/surat/:id/approve", requireAuth, requireKepalaBidang, async (req,
     // 4. Hitung SHA-256 Hash File Final
     const fileHash = calculateSha256(finalPdfBytes);
 
-    // 6. Upload File Final ke Google Drive jika terhubung
+    // 6. Upload File Final ke Google Drive folder resmi jika terhubung
     let driveResult = null;
     try {
-      driveResult = await uploadPdfToDrive(finalPdfPath, finalPdfName);
+      driveResult = await uploadPdfToDrive(finalPdfPath, finalPdfName, getSignedFolderId());
     } catch (dErr) {
       console.warn("⚠️ [Drive Upload] Gagal upload ke drive:", dErr.message);
     }
@@ -890,8 +914,10 @@ app.get("/api/surat/:id/download", async (req, res) => {
     });
 
     const pdfName = surat.pdfFilename || (isDraft ? `Draft_${surat.id.slice(0, 8)}.pdf` : `Surat_${surat.id.slice(0, 8)}.pdf`);
+    const isDownload = req.query.download === "1" || req.query.download === "true";
+    const disposition = isDownload ? "attachment" : "inline";
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `${isDraft ? "inline" : "attachment"}; filename="${pdfName}"`);
+    res.setHeader("Content-Disposition", `${disposition}; filename="${pdfName}"`);
     return res.send(pdfBuf);
   } catch (err) {
     console.error("Gagal membuat PDF:", err);

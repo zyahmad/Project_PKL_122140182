@@ -243,11 +243,31 @@ export default function RiwayatTab({ user, onEditLetter, onOpenVerify }) {
                               href={getPdfDownloadUrl(h.id)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="badge-drive"
-                              title="Unduh PDF Resmi"
+                              className="btn btn-ghost btn-sm"
+                              title="Buka dan baca surat resmi di tab baru"
                             >
-                              Unduh PDF
+                              👁️ Buka PDF
                             </a>
+                            <a
+                              href={getPdfDownloadUrl(h.id, true)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-ghost btn-sm"
+                              title="Unduh file PDF resmi ke komputer"
+                            >
+                              ⬇️ Unduh
+                            </a>
+                            {h.driveUrl && (
+                              <a
+                                href={h.driveUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="badge-drive"
+                                title="Buka berkas surat resmi di Google Drive"
+                              >
+                                ☁️ Google Drive
+                              </a>
+                            )}
                             {h.verificationToken && (
                               <button
                                 type="button"
@@ -270,6 +290,15 @@ export default function RiwayatTab({ user, onEditLetter, onOpenVerify }) {
                           </>
                         ) : h.status === 'DRAFT' ? (
                           <>
+                            <a
+                              href={getPdfDownloadUrl(h.id)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-ghost btn-sm"
+                              title="Pratinjau draft surat"
+                            >
+                              👁️ Pratinjau
+                            </a>
                             <button
                               type="button"
                               className="btn btn-primary btn-sm"
@@ -292,6 +321,15 @@ export default function RiwayatTab({ user, onEditLetter, onOpenVerify }) {
                           </>
                         ) : h.status === 'DITOLAK' ? (
                           <>
+                            <a
+                              href={getPdfDownloadUrl(h.id)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-ghost btn-sm"
+                              title="Pratinjau surat yang ditolak"
+                            >
+                              👁️ Pratinjau
+                            </a>
                             {canEdit(h) && (
                               <button
                                 type="button"
@@ -304,15 +342,29 @@ export default function RiwayatTab({ user, onEditLetter, onOpenVerify }) {
                             )}
                           </>
                         ) : (
-                          <a
-                            href={getPdfDownloadUrl(h.id)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn btn-ghost btn-sm"
-                            title="Buka pratinjau PDF"
-                          >
-                            Pratinjau
-                          </a>
+                          <>
+                            <a
+                              href={getPdfDownloadUrl(h.id)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-ghost btn-sm"
+                              title="Buka pratinjau PDF"
+                            >
+                              👁️ Pratinjau
+                            </a>
+                            {h.draftDriveUrl && (
+                              <a
+                                href={h.draftDriveUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="badge-drive"
+                                style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.3)' }}
+                                title="Buka berkas draft di Google Drive"
+                              >
+                                ☁️ Drive Draft
+                              </a>
+                            )}
+                          </>
                         )}
 
                         {canDelete(h) && (

@@ -52,6 +52,24 @@ function getFolderId() {
   return config.folderId || null;
 }
 
+/**
+ * Mendapatkan ID Folder khusus Draft surat di Google Drive
+ */
+function getDraftFolderId() {
+  return process.env.GOOGLE_DRIVE_FOLDER_DRAFT_ID || 
+         process.env.GOOGLE_DRIVE_DRAFT_FOLDER_ID || 
+         getFolderId();
+}
+
+/**
+ * Mendapatkan ID Folder khusus Surat Resmi (Sudah TTD) di Google Drive
+ */
+function getSignedFolderId() {
+  return process.env.GOOGLE_DRIVE_FOLDER_SIGNED_ID || 
+         process.env.GOOGLE_DRIVE_FOLDER_ID || 
+         getFolderId();
+}
+
 function shouldRefreshDriveToken(token) {
   if (!token) return true;
   if (typeof token.expiry_date !== "number") return true;
@@ -175,12 +193,13 @@ function getDriveClient() {
  * Upload file PDF ke Google Drive
  * @param {string} filePath - Path file PDF lokal
  * @param {string} fileName - Nama file di Google Drive
+ * @param {string} targetFolderId - (Opsional) ID folder tujuan (draft vs signed)
  * @returns {Promise<{fileId: string, webViewLink: string}|null>}
  */
-async function uploadPdfToDrive(filePath, fileName) {
+async function uploadPdfToDrive(filePath, fileName, targetFolderId = null) {
   try {
     const drive = getDriveClient();
-    const folderId = getFolderId();
+    const folderId = targetFolderId || getFolderId();
 
     if (!drive) {
       console.warn("⚠️ [Google Drive] Belum terhubung.");
@@ -204,7 +223,7 @@ async function uploadPdfToDrive(filePath, fileName) {
       supportsAllDrives: true,
     });
 
-    console.log("☁️ [Google Drive] Berhasil upload:", res.data.id);
+    console.log("☁️ [Google Drive] Berhasil upload ke folder", folderId || "root", ":", res.data.id);
     return {
       fileId: res.data.id,
       webViewLink: res.data.webViewLink,
@@ -221,6 +240,9 @@ module.exports = {
   getDriveClient,
   uploadPdfToDrive,
   getDriveConfig,
+  getFolderId,
+  getDraftFolderId,
+  getSignedFolderId,
   sanitizeDriveCredentials,
   CONFIG_PATH,
   TMP_CONFIG_PATH,

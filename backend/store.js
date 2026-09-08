@@ -146,6 +146,8 @@ function mapHistoryRecord(h) {
     pdfFilename: h.pdf_filename || null,
     driveUrl: h.drive_url || null,
     driveFileId: h.drive_file_id || null,
+    draftDriveUrl: h.data?.draft_drive_url || null,
+    draftDriveFileId: h.data?.draft_drive_file_id || null,
     createdAt: h.created_at,
     updatedAt: h.updated_at || h.created_at,
     data: h.data || {},

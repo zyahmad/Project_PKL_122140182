@@ -76,7 +76,9 @@ Buka menu dropdown **Environment Variables**, lalu tambahkan variabel-variabel b
 | `REACT_APP_SUPABASE_URL` | `https://eliovyrvtxyvfznkbgex.supabase.co` | URL Supabase Project Anda |
 | `REACT_APP_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_5AvhCaX_rmhZ2bo2_1VdNg_K5LlLB8I` | Anon/Publishable Key |
 | `SUPABASE_SERVICE_ROLE_KEY` | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` | Service Role Key dari `.env` |
-| `GOOGLE_DRIVE_FOLDER_ID` | `15eoUcYIaYiUYmaqzZXCm4oQRC6cBgeHO` | *(Opsional)* Folder ID Google Drive |
+| `GOOGLE_DRIVE_FOLDER_ID` | `15eoUcYIaYiUYmaqzZXCm4oQRC6cBgeHO` | *(Opsional)* Folder ID Google Drive untuk surat resmi / hasil ttd |
+| `GOOGLE_DRIVE_FOLDER_DRAFT_ID` | `1xyz...` | *(Opsional)* Folder ID Google Drive untuk draf surat |
+| `GOOGLE_DRIVE_OAUTH_CREDENTIALS` | `{"web":{"client_id":"..."}}` | *(Opsional)* Isi lengkap file `oauth.json` dalam format satu baris string JSON |
 
 ### Langkah 4: Klik Deploy!
 1. Klik tombol **Deploy**.
@@ -87,16 +89,23 @@ Buka menu dropdown **Environment Variables**, lalu tambahkan variabel-variabel b
 
 ---
 
-## 🔑 4. Konfigurasi Tambahan (Opsional untuk Google Drive)
+## 🔑 4. Konfigurasi 2 Folder Google Drive (Draft & Surat Resmi)
 
-Jika Anda mengaktifkan fitur pencadangan otomatis Google Drive:
-1. Buka [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials).
-2. Edit **OAuth 2.0 Client IDs** Anda.
-3. Pada bagian **Authorized redirect URIs**, tambahkan URL domain Vercel Anda:
+Aplikasi memisahkan penyimpanan berkas PDF ke dalam 2 folder berbeda di Google Drive:
+1. **Folder Draft**: Menyimpan pratinjau surat draft yang dikirim operator ke verifikator/Kepala Bidang (`GOOGLE_DRIVE_FOLDER_DRAFT_ID`).
+2. **Folder Hasil / Resmi**: Menyimpan surat yang sudah disahkan/ditandatangani secara digital dengan QR Code (`GOOGLE_DRIVE_FOLDER_ID` atau `GOOGLE_DRIVE_FOLDER_SIGNED_ID`).
+
+### Cara Menghubungkan Google Drive di Vercel:
+1. Masukkan isi file `oauth.json` ke Environment Variable Vercel dengan nama **`GOOGLE_DRIVE_OAUTH_CREDENTIALS`**.
+2. Masukkan ID folder Google Drive ke **`GOOGLE_DRIVE_FOLDER_DRAFT_ID`** (folder draft) dan **`GOOGLE_DRIVE_FOLDER_ID`** (folder resmi).
+   - *(Tips: ID folder adalah teks setelah `/folders/` pada URL folder Google Drive Anda)*.
+3. Buka [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials).
+4. Edit **OAuth 2.0 Client IDs** Anda.
+5. Pada bagian **Authorized redirect URIs**, tambahkan URL domain Vercel Anda:
    ```
    https://nama-proyek-anda.vercel.app/oauth2callback
    ```
-4. Simpan, lalu pada aplikasi live Anda, klik tombol **Hubungkan Google Drive** satu kali.
+6. Simpan, lalu pada aplikasi live Anda, login sebagai admin dan klik tombol **Hubungkan Google Drive** satu kali untuk autorisasi akun Google.
 
 ---
 

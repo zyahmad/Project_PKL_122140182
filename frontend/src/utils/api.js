@@ -282,8 +282,8 @@ export async function verifyDocument(token) {
   return res.json();
 }
 
-export function getPdfDownloadUrl(id) {
-  return `/api/surat/${id}/download`;
+export function getPdfDownloadUrl(id, download = false) {
+  return `/api/surat/${id}/download${download ? '?download=1' : ''}`;
 }
 
 // ---------- Distribusi Surat / Surat Masuk ----------

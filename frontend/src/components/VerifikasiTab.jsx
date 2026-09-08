@@ -168,15 +168,29 @@ export default function VerifikasiTab({ user }) {
                     <span className="date-text">{s.tanggal}</span>
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    <a
-                      href={getPdfDownloadUrl(s.id)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn btn-ghost btn-sm"
-                      title="Buka pratinjau dokumen PDF"
-                    >
-                      Buka PDF
-                    </a>
+                    <div style={{ display: 'inline-flex', gap: 4, flexDirection: 'column', alignItems: 'center' }}>
+                      <a
+                        href={getPdfDownloadUrl(s.id)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-ghost btn-sm"
+                        title="Buka pratinjau dokumen PDF"
+                      >
+                        👁️ Buka PDF
+                      </a>
+                      {s.draftDriveUrl && (
+                        <a
+                          href={s.draftDriveUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="badge-drive"
+                          style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.3)', fontSize: '11px', padding: '2px 6px' }}
+                          title="Buka draft di Google Drive"
+                        >
+                          ☁️ Drive Draft
+                        </a>
+                      )}
+                    </div>
                   </td>
                   <td style={{ textAlign: 'center' }}>
                     <div style={{ display: 'inline-flex', gap: 6 }}>
