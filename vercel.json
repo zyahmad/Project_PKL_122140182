@@ -1,12 +1,13 @@
 {
   "version": 2,
+  "installCommand": "npm install && cd backend && npm install",
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/dist",
   "functions": {
     "api/index.js": {
       "memory": 1024,
       "maxDuration": 15,
-      "includeFiles": "backend/templates/**"
+      "includeFiles": "backend/**"
     }
   },
   "rewrites": [
@@ -28,4 +29,3 @@
     }
   ]
 }
-
