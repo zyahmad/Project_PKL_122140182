@@ -1,6 +1,23 @@
 const BASE = '';
 let cachedCsrfToken = null;
 
+async function parseError(res, fallback = 'Terjadi kesalahan pada server') {
+  try {
+    const err = await res.json();
+    return err.error || err.message || fallback;
+  } catch {
+    try {
+      const text = await res.text();
+      if (text && !text.includes('<!DOCTYPE') && !text.includes('<html') && text.length < 300) {
+        return text;
+      }
+      return `${fallback} (HTTP ${res.status}: ${res.statusText || 'Server Error'})`;
+    } catch {
+      return `${fallback} (HTTP ${res.status})`;
+    }
+  }
+}
+
 export async function getCsrfToken() {
   if (cachedCsrfToken) return cachedCsrfToken;
   try {
@@ -59,11 +76,15 @@ async function request(url, options = {}) {
 }
 
 export async function getMe() {
-  const res = await request('/api/me');
-  if (!res.ok) return null;
-  const data = await res.json();
-  if (data.csrfToken) cachedCsrfToken = data.csrfToken;
-  return data.user;
+  try {
+    const res = await request('/api/me');
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.csrfToken) cachedCsrfToken = data.csrfToken;
+    return data.user;
+  } catch {
+    return null;
+  }
 }
 
 export async function login(username, password) {
@@ -72,8 +93,8 @@ export async function login(username, password) {
     body: JSON.stringify({ username, password }),
   });
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || 'Login gagal');
+    const errorMsg = await parseError(res, 'Login gagal');
+    throw new Error(errorMsg);
   }
   const data = await res.json();
   if (data.csrfToken) cachedCsrfToken = data.csrfToken;
@@ -88,21 +109,33 @@ export async function logout() {
 export async function getDriveStatus() {
   const res = await request('/api/drive-status');
   if (!res.ok) return { connected: false };
-  return res.json();
+  try {
+    return await res.json();
+  } catch {
+    return { connected: false };
+  }
 }
 
 export async function getBranches() {
   const res = await request('/api/branches');
   if (!res.ok) return [];
-  const data = await res.json();
-  return data.branches || [];
+  try {
+    const data = await res.json();
+    return data.branches || [];
+  } catch {
+    return [];
+  }
 }
 
 export async function getSignatories() {
   const res = await request('/api/signatories');
   if (!res.ok) return [];
-  const data = await res.json();
-  return data.signatories || [];
+  try {
+    const data = await res.json();
+    return data.signatories || [];
+  } catch {
+    return [];
+  }
 }
 
 export async function addSignatory(payload) {
@@ -111,8 +144,8 @@ export async function addSignatory(payload) {
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || 'Gagal menambah penandatangan');
+    const errorMsg = await parseError(res, 'Gagal menambah penandatangan');
+    throw new Error(errorMsg);
   }
   return res.json();
 }
@@ -124,8 +157,12 @@ export async function deleteSignatory(id) {
 export async function getNextNomor(kode = '07') {
   const res = await request(`/api/next-nomor?kode=${kode}`);
   if (!res.ok) return '';
-  const data = await res.json();
-  return data.nomor_surat || '';
+  try {
+    const data = await res.json();
+    return data.nomor_surat || '';
+  } catch {
+    return '';
+  }
 }
 
 export async function getHistory(page = 1, limit = 10, status = '') {
@@ -133,14 +170,18 @@ export async function getHistory(page = 1, limit = 10, status = '') {
   if (status) url += `&status=${encodeURIComponent(status)}`;
   const res = await request(url);
   if (!res.ok) return { history: [], pagination: {} };
-  return res.json();
+  try {
+    return await res.json();
+  } catch {
+    return { history: [], pagination: {} };
+  }
 }
 
 export async function getHistoryById(id) {
   const res = await request(`/api/history/${id}`);
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || 'Surat tidak ditemukan');
+    const errorMsg = await parseError(res, 'Surat tidak ditemukan');
+    throw new Error(errorMsg);
   }
   return res.json();
 }
@@ -148,16 +189,20 @@ export async function getHistoryById(id) {
 export async function deleteHistory(id) {
   const res = await request(`/api/history/${id}`, { method: 'DELETE' });
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || 'Gagal menghapus');
+    const errorMsg = await parseError(res, 'Gagal menghapus');
+    throw new Error(errorMsg);
   }
 }
 
 export async function getUsers() {
   const res = await request('/api/users');
   if (!res.ok) return [];
-  const data = await res.json();
-  return data.users || [];
+  try {
+    const data = await res.json();
+    return data.users || [];
+  } catch {
+    return [];
+  }
 }
 
 export async function addUser(payload) {
@@ -166,8 +211,8 @@ export async function addUser(payload) {
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || 'Gagal');
+    const errorMsg = await parseError(res, 'Gagal menambah pengguna');
+    throw new Error(errorMsg);
   }
   return res.json();
 }
@@ -175,8 +220,8 @@ export async function addUser(payload) {
 export async function deleteUser(id) {
   const res = await request(`/api/users/${id}`, { method: 'DELETE' });
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || 'Gagal menghapus');
+    const errorMsg = await parseError(res, 'Gagal menghapus pengguna');
+    throw new Error(errorMsg);
   }
 }
 
@@ -187,8 +232,8 @@ export async function saveDraft(data) {
     body: JSON.stringify(data),
   });
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || 'Gagal menyimpan draft');
+    const errorMsg = await parseError(res, 'Gagal menyimpan draft');
+    throw new Error(errorMsg);
   }
   return res.json();
 }
@@ -198,8 +243,8 @@ export async function sendSurat(id) {
     method: 'POST',
   });
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || 'Gagal mengirim surat ke Kepala Bidang');
+    const errorMsg = await parseError(res, 'Gagal mengirim surat ke Kepala Bidang');
+    throw new Error(errorMsg);
   }
   return res.json();
 }
@@ -210,8 +255,8 @@ export async function approveSurat(id, payload = {}) {
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || 'Gagal menyetujui surat');
+    const errorMsg = await parseError(res, 'Gagal menyetujui surat');
+    throw new Error(errorMsg);
   }
   return res.json();
 }
@@ -222,8 +267,8 @@ export async function rejectSurat(id, alasan) {
     body: JSON.stringify({ alasan }),
   });
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || 'Gagal menolak surat');
+    const errorMsg = await parseError(res, 'Gagal menolak surat');
+    throw new Error(errorMsg);
   }
   return res.json();
 }
@@ -231,8 +276,8 @@ export async function rejectSurat(id, alasan) {
 export async function verifyDocument(token) {
   const res = await request(`/api/verify/${token}`);
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || 'Dokumen tidak valid atau tidak ditemukan');
+    const errorMsg = await parseError(res, 'Dokumen tidak valid atau tidak ditemukan');
+    throw new Error(errorMsg);
   }
   return res.json();
 }
@@ -248,8 +293,8 @@ export async function forwardSurat(id, payload) {
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || 'Gagal meneruskan surat ke cabang');
+    const errorMsg = await parseError(res, 'Gagal meneruskan surat ke cabang');
+    throw new Error(errorMsg);
   }
   return res.json();
 }
@@ -260,7 +305,11 @@ export async function getSuratMasuk(page = 1, limit = 10, search = '', branchId 
   if (branchId) url += `&branchId=${encodeURIComponent(branchId)}`;
   const res = await request(url);
   if (!res.ok) return { incoming: [], pagination: {} };
-  return res.json();
+  try {
+    return await res.json();
+  } catch {
+    return { incoming: [], pagination: {} };
+  }
 }
 
 export async function markSuratMasukRead(id) {
@@ -268,5 +317,9 @@ export async function markSuratMasukRead(id) {
     method: 'POST',
   });
   if (!res.ok) return null;
-  return res.json();
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
 }

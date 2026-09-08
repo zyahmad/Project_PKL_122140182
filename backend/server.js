@@ -7,6 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const store = require("./store");
+const db = require("./db");
 const { uploadPdfToDrive, getOAuth2Client, getDriveConfig, sanitizeDriveCredentials, CONFIG_PATH } = require("./drive");
 const { generateQrCodeBuffer, calculateSha256, TRANSPARENT_1X1_PNG } = require("./signer");
 const { generateSuratPdf } = require("./services/pdfGenerator");
@@ -35,6 +36,32 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(authenticateUser);
 app.use(verifyCsrfToken);
+
+// Endpoint diagnostik & health check
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "ok",
+    supabaseConfigured: Boolean(db && db.isConfigured),
+    env: {
+      hasSupabaseUrl: Boolean(process.env.SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL),
+      hasServiceRoleKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.REACT_APP_SUPABASE_SERVICE_ROLE_KEY),
+      nodeEnv: process.env.NODE_ENV,
+      isVercel: Boolean(process.env.VERCEL)
+    }
+  });
+});
+
+// Middleware pengecekan ketersediaan konfigurasi Supabase
+app.use((req, res, next) => {
+  if (req.path === "/api/health") return next();
+  if (req.path.startsWith("/api") && db && !db.isConfigured) {
+    return res.status(500).json({
+      error: "Konfigurasi Supabase belum lengkap di Vercel Environment Variables. Harap atur SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY di Settings Vercel lalu lakukan Redeploy.",
+      code: "SUPABASE_CONFIG_MISSING"
+    });
+  }
+  next();
+});
 
 // Endpoint untuk mengambil CSRF Token aktif (Stateless Double-Submit Cookie)
 app.get("/api/csrf-token", (req, res) => {

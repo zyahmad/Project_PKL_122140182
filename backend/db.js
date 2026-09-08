@@ -11,24 +11,38 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ||
                     process.env.SUPABASE_ANON_KEY ||
                     process.env.REACT_APP_SUPABASE_PUBLISHABLE_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
-  const errMsg = "❌ [Supabase Fatal]: SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY wajib dikonfigurasi di file .env. Seluruh database aplikasi harus dijalankan dari Supabase.";
-  console.error(errMsg);
-  throw new Error(errMsg);
-}
+const isConfigured = Boolean(supabaseUrl && supabaseKey);
 
 let supabase;
-try {
-  supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
+if (isConfigured) {
+  try {
+    supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
+    supabase.isConfigured = true;
+    console.log("⚡ [Supabase] Terkoneksi ke Supabase Cloud PostgreSQL!");
+  } catch (err) {
+    console.error("❌ [Supabase] Gagal menginisialisasi client Supabase:", err.message);
+  }
+} else {
+  console.warn("⚠️ [Supabase Warning]: SUPABASE_URL atau SUPABASE_SERVICE_ROLE_KEY belum diset di Environment Variables.");
+}
+
+// Fallback proxy agar modul tidak crash saat cold-start serverless function jika env belum diset di Vercel
+if (!supabase) {
+  supabase = new Proxy({}, {
+    get(target, prop) {
+      if (prop === "isConfigured") return false;
+      return () => {
+        throw new Error(
+          "Supabase belum dikonfigurasi. Harap atur Environment Variables SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY di Settings Vercel, lalu Redeploy."
+        );
+      };
+    }
   });
-  console.log("⚡ [Supabase] Terkoneksi ke Supabase Cloud PostgreSQL!");
-} catch (err) {
-  console.error("❌ [Supabase] Gagal menginisialisasi client Supabase:", err.message);
-  throw err;
 }
 
 module.exports = supabase;
