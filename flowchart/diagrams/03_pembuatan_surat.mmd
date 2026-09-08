@@ -1,0 +1,35 @@
+flowchart TD
+    StartSurat(["User Buka Tab 'Buat Surat'"]) --> FetchInit["Load Penandatangan & Nomor Surat Otomatis\n(GET /api/signatories & GET /api/next-nomor)"]
+    FetchInit --> FillForm["User Mengisi Form Surat:\n- Tempat, Sifat, Lampiran, Hal\n- Tujuan & Lokasi Tujuan\n- Isi Surat & Pilihan Penandatangan"]
+    FillForm --> SubmitSurat["Klik 'Buat & Unduh Surat' (POST /api/generate-surat)"]
+
+    SubmitSurat --> MutexCheck{"Apakah User Sedang Memproses Surat Lain?\n(Active Concurrency Check)"}
+    MutexCheck -- "Ya" --> ErrMutex["Tolak: 429 Too Many Requests"] --> FillForm
+    MutexCheck -- "No" --> DupCheck{"Cek Duplikasi Konten dalam 30 Detik?"}
+
+    DupCheck -- "Ya" --> ErrDup["Tolak: Surat yang sama baru saja dibuat"] --> FillForm
+    DupCheck -- "Tidak" --> ValFields{"Semua Field Wajib Terisi?"}
+
+    ValFields -- "Tidak" --> ErrFields["Tolak: 400 Field Belum Lengkap"] --> FillForm
+    ValFields -- "Ya" --> CheckNomor{"Nomor Surat Kosong / Sudah Dipakai?"}
+
+    CheckNomor -- "Ya" --> GenNewNomor["Generate Nomor Urut Otomatis Baru"]
+    CheckNomor -- "Tidak" --> RenderDocx["Render Template DOCX\n(PizZip + Docxtemplater)"]
+    GenNewNomor --> RenderDocx
+
+    RenderDocx --> SaveTempDocx["Simpan File DOCX Sementara"]
+    SaveTempDocx --> ConvertPDF["Konversi DOCX ke PDF via VBScript / MS Word COM"]
+    ConvertPDF --> DeleteDocx["Hapus File DOCX Sementara"]
+    
+    DeleteDocx --> CheckDrive{"Google Drive Terhubung?"}
+    CheckDrive -- "Ya" --> UploadDrive["Upload PDF ke Google Drive Folder"]
+    CheckDrive -- "Tidak" --> SkipDrive["Lewati Upload Drive"]
+
+    UploadDrive --> SaveHistory["Simpan Riwayat Surat ke Supabase / JSON Store"]
+    SkipDrive --> SaveHistory
+
+    SaveHistory --> StreamPDF["Kirim Stream File PDF ke Browser"]
+    StreamPDF --> DownloadTrigger["Browser Mengunduh File 'Surat_Rekomendasi.pdf'"]
+    DownloadTrigger --> ResetForm["Reset Form & Generate Nomor Surat Baru"]
+    ResetForm --> Selesai(["Selesai"])
+

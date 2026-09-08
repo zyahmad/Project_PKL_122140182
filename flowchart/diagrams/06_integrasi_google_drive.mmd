@@ -1,0 +1,14 @@
+flowchart TD
+    StartOAuth(["User Klik 'Hubungkan Drive' di Header"]) --> ReqAuth["Akses GET /auth/google"]
+    ReqAuth --> GenAuthURL["Backend Generate URL OAuth2 Google\n(Scope: drive.file, drive)"]
+    GenAuthURL --> RedirectGoogle["Redirect User ke Halaman Izin Akun Google"]
+    
+    RedirectGoogle --> UserConsent{"User Menyetujui Izin Google?"}
+    UserConsent -- "Tidak" --> AuthCancel["Proses Dibatalkan"]
+    UserConsent -- "Ya" --> Callback["Google Redirect ke /oauth2callback?code=XXX"]
+
+    Callback --> ExchangeToken["Backend Menukar Code dengan Access & Refresh Token"]
+    ExchangeToken --> SaveConfig["Simpan Refresh Token ke drive-config.json"]
+    SaveConfig --> SuccessPage["Tampilkan Halaman 'Google Drive Berhasil Terhubung'"]
+    SuccessPage --> ReturnApp["User Kembali ke Aplikasi (Status: Drive Terhubung ✅)"]
+

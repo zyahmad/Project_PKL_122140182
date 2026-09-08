@@ -1,0 +1,22 @@
+flowchart TD
+    User(["👤 Pengguna (Staff / Admin / Superadmin)"]) -->|Akses Web /| FE["🖥️ Frontend (React JSX + Vite)"]
+    
+    FE -->|Cek Sesi /api/me| AuthCheck{"Sudah Login?"}
+    AuthCheck -- "Tidak" --> LoginPage["Halaman Login (/login)"]
+    AuthCheck -- "Ya" --> Dashboard["Halaman Dashboard (/dashboard)"]
+
+    LoginPage -->|POST /api/login| AuthAPI["Backend Auth Controller"]
+    AuthAPI -->|Verifikasi Hash Bcrypt| DataStore[("Database Store\nSupabase Cloud / JSON Fallback")]
+    AuthAPI -->|Buat Session Cookie| Dashboard
+
+    Dashboard --> Tab1["📝 Tab Buat Surat"]
+    Dashboard --> Tab2["📋 Tab Riwayat Surat"]
+    Dashboard --> Tab3["✒️ Tab Penandatangan (Admin+)"]
+    Dashboard --> Tab4["👥 Tab Kelola User (Admin+)"]
+    Dashboard --> GDriveAuth["🔗 Hubungkan Google Drive OAuth"]
+
+    Tab1 -->|Generate PDF| PDFEngine["Docxtemplater + Word Converter"]
+    PDFEngine --> GDriveAPI["☁️ Google Drive API"]
+    PDFEngine --> Download(["📥 Download File PDF"])
+    PDFEngine -->|Simpan Metadata| DataStore
+

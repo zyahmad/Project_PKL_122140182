@@ -1,0 +1,74 @@
+/* ═══════════════════════════════════════════════════════
+   LOGIN PAGE — Harmonized Typography
+   ═══════════════════════════════════════════════════════ */
+
+.login-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  padding: 36px 32px;
+  animation: fadeSlideUp 0.4s ease-out;
+}
+
+.login-card h1 {
+  font-size: 22px;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 4px;
+  background: linear-gradient(135deg, var(--emerald-400), var(--teal-400));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.login-card .subtitle {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+
+.login-card .field { margin-bottom: 16px; }
+
+.login-card .btn-primary {
+  width: 100%;
+  padding: 11px;
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.login-error {
+  margin-top: 14px;
+  text-align: center;
+  color: var(--text-danger);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 480px) {
+  .login-wrapper {
+    padding: 14px;
+  }
+  .login-card {
+    padding: 26px 18px;
+    border-radius: var(--radius-md);
+  }
+  .login-card h1 {
+    font-size: 19px;
+  }
+}
+

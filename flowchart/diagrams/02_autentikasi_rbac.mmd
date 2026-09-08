@@ -1,0 +1,17 @@
+flowchart TD
+    Start(["Mulai"]) --> InputLogin["Input Username & Password"]
+    InputLogin --> SubmitLogin["Kirim Request POST /api/login"]
+    SubmitLogin --> CheckUser{"User Ditemukan & Password Cocok?"}
+
+    CheckUser -- "Tidak" --> LoginFail["Tampilkan Pesan Error (401)"] --> InputLogin
+    CheckUser -- "Ya" --> CreateSession["Buat Session Cookie (8 Jam)"]
+    CreateSession --> CheckRole{"Identifikasi Role Pengguna"}
+
+    CheckRole -- "staff" --> StaffView["Dashboard Staff:\n- Buat Surat\n- Lihat Riwayat Pribadi"]
+    CheckRole -- "admin" --> AdminView["Dashboard Admin Cabang:\n- Buat Surat\n- Riwayat Cabang\n- Kelola Penandatangan Cabang\n- Kelola User Cabang"]
+    CheckRole -- "superadmin" --> SuperView["Dashboard Superadmin:\n- Buat Surat Lintas Cabang\n- Riwayat Semua Cabang\n- Kelola Penandatangan Global\n- Kelola Semua User"]
+
+    StaffView --> End(["Selesai"])
+    AdminView --> End
+    SuperView --> End
+

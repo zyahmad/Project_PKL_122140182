@@ -1,0 +1,24 @@
+flowchart TD
+    StartAdmin(["Admin / Superadmin Akses Tab Penandatangan / User"]) --> SelectTab{"Pilih Tab"}
+
+    subgraph KelolaPenandatangan ["Kelola Penandatangan"]
+        SelectTab -- "Penandatangan" --> ViewSig["Lihat Daftar Penandatangan\n(Superadmin: Semua / Admin: Cabangnya)"]
+        ViewSig --> ActSig{"Aksi Penandatangan"}
+        ActSig -- "Tambah" --> FormSig["Input Jabatan, Nama, NIP, (Cabang jika Superadmin)"]
+        FormSig --> SubmitSig["POST /api/signatories"] --> SaveSig["Simpan ke DB"] --> ViewSig
+        ActSig -- "Hapus" --> DelSig["DELETE /api/signatories/:id"] --> DeleteSigDB["Hapus dari DB"] --> ViewSig
+    end
+
+    subgraph KelolaUser ["Kelola Pengguna"]
+        SelectTab -- "Kelola User" --> ViewUser["Lihat Daftar User\n(Superadmin: Semua / Admin: Cabangnya)"]
+        ViewUser --> ActUser{"Aksi User"}
+        ActUser -- "Tambah" --> FormUser["Input Nama, Username, Password, Role, Cabang"]
+        FormUser --> CheckExist{"Username Sudah Ada?"}
+        CheckExist -- "Ya" --> ErrUser["Error: Username sudah dipakai"]
+        CheckExist -- "Tidak" --> HashPass["Hash Password dengan Bcrypt"]
+        HashPass --> SubmitUser["POST /api/users"] --> SaveUser["Simpan User ke DB"] --> ViewUser
+        ActUser -- "Hapus" --> SelfCheck{"Apakah Menghapus Diri Sendiri?"}
+        SelfCheck -- "Ya" --> BlockDel["Tolak: Tidak bisa hapus akun sendiri"]
+        SelfCheck -- "Tidak" --> DelUser["DELETE /api/users/:id"] --> DeleteUserDB["Hapus User dari DB"] --> ViewUser
+    end
+

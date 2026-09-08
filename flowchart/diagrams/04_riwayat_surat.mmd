@@ -1,0 +1,27 @@
+flowchart TD
+    StartHist(["Buka Tab 'Riwayat Surat'"]) --> FetchHist["Kirim GET /api/history?page=X&limit=10"]
+    FetchHist --> FilterRole{"Filter Riwayat di Backend Sesuai Role"}
+
+    FilterRole -- "Superadmin" --> AllData["Ambil Seluruh Data Riwayat Semua Cabang"]
+    FilterRole -- "Admin" --> BranchData["Filter: Surat dari Cabang Sendiri"]
+    FilterRole -- "Staff" --> UserData["Filter: Surat yang Dibuat Oleh User Sendiri"]
+
+    AllData --> Pagination["Hitung Total Data & Paginate (10 per Halaman)"]
+    BranchData --> Pagination
+    UserData --> Pagination
+
+    Pagination --> RenderTable["Tampilkan Tabel Riwayat di Frontend"]
+    RenderTable --> UserAction{"Aksi Pengguna"}
+
+    UserAction -- "Pencarian Real-Time" --> FilterClient["Filter Baris Berdasarkan Nomor, Hal, Tujuan, Pembuat"]
+    UserAction -- "Buka Drive" --> OpenLink["Buka Link PDF di Tab Baru Google Drive"]
+    UserAction -- "Ganti Halaman" --> ChangePage["Request Page Baru"] --> FetchHist
+    UserAction -- "Hapus Riwayat" --> ConfirmDelete{"Konfirmasi Dialog Hapus?"}
+
+    ConfirmDelete -- "Ya" --> SendDelete["Kirim DELETE /api/history/:id"]
+    SendDelete --> VerifyPerm{"Cek Izin Hapus:\n- Superadmin: Boleh Semua\n- Admin: Boleh Cabang Sendiri\n- Staff: Hanya Milik Sendiri"}
+
+    VerifyPerm -- "Diizinkan" --> DeleteDB["Hapus dari Supabase / JSON"] --> RefreshHist["Muat Ulang Halaman Riwayat"]
+    VerifyPerm -- "Ditolak" --> Err403["Tampilkan Error 403 Forbidden"]
+    ConfirmDelete -- "Batal" --> RenderTable
+

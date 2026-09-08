@@ -1,0 +1,32 @@
+{
+  "name": "surat-rekomendasi",
+  "version": "1.0.0",
+  "description": "Sistem Pembuatan Surat Rekomendasi - Kanwil Kemenag Lampung",
+  "main": "api/index.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "build": "cd frontend && npm install && npm run build",
+    "postinstall": "cd backend && npm install"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@sparticuz/chromium": "^141.0.0",
+    "@supabase/supabase-js": "^2.112.4",
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "googleapis": "^178.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.2.0",
+    "pdf-lib": "^1.17.1",
+    "puppeteer-core": "^24.40.0",
+    "qrcode": "^1.5.4"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flowchart Sistem Surat Rekomendasi</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: rgba(18, 24, 38, 0.75);
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --primary: #38bdf8;
+      --primary-hover: #0ea5e9;
+      --accent: #10b981;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 30px 20px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    h1 {
+      font-size: 28px;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 15px;
+    }
+    .nav-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 25px;
+    }
+    .tab-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+    .tab-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .tab-btn.active {
+      background: var(--primary);
+      color: #0b0f19;
+      font-weight: 700;
+      border-color: var(--primary);
+    }
+    .diagram-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      margin-bottom: 25px;
+      display: none;
+    }
+    .diagram-card.active {
+      display: block;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 15px;
+    }
+    .card-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .mermaid {
+      display: flex;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 20px;
+      border-radius: 12px;
+      overflow-x: auto;
+    }
+    .desc-box {
+      margin-top: 20px;
+      padding: 15px 20px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 10px;
+      border-left: 4px solid var(--primary);
+      font-size: 14px;
+      line-height: 1.6;
+      color: #d1d5db;
+    }
+    .desc-box strong {
+      color: #fff;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    .footer a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📊 Flowchart & Arsitektur Sistem Surat Rekomendasi</h1>
+      <p class="subtitle">Dokumentasi interaktif alur kerja, logika bisnis, peran otorisasi, dan integrasi Google Drive.</p>
+    </header>
+
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab(0)">1. Arsitektur Sistem</button>
+      <button class="tab-btn" onclick="switchTab(1)">2. Autentikasi & RBAC</button>
+      <button class="tab-btn" onclick="switchTab(2)">3. Pembuatan Surat</button>
+      <button class="tab-btn" onclick="switchTab(3)">4. Riwayat Surat</button>
+      <button class="tab-btn" onclick="switchTab(4)">5. User & Penandatangan</button>
+      <button class="tab-btn" onclick="switchTab(5)">6. Integrasi Google Drive</button>
+    </div>
+
+    <!-- 1. Arsitektur Sistem -->
+    <div class="diagram-card active" id="tab-0">
+      <div class="card-header">
+        <h2 class="card-title">1. Arsitektur Sistem Keseluruhan</h2>
+      </div>
+      <div class="mermaid">
+flowchart TD
+    User(["👤 Pengguna (Staff / Admin / Superadmin)"]) -->|Akses Web /| FE["🖥️ Frontend (React JSX + Vite)"]
+    
+    FE -->|Cek Sesi /api/me| AuthCheck{"Sudah Login?"}
+    AuthCheck -- "Tidak" --> LoginPage["Halaman Login (/login)"]
+    AuthCheck -- "Ya" --> Dashboard["Halaman Dashboard (/dashboard)"]
+
+    LoginPage -->|POST /api/login| AuthAPI["Backend Auth Controller"]
+    AuthAPI -->|Verifikasi Hash Bcrypt| DataStore[("Database Store\nSupabase Cloud / JSON Fallback")]
+    AuthAPI -->|Buat Session Cookie| Dashboard
+
+    Dashboard --> Tab1["📝 Tab Buat Surat"]
+    Dashboard --> Tab2["📋 Tab Riwayat Surat"]
+    Dashboard --> Tab3["✒️ Tab Penandatangan (Admin+)"]
+    Dashboard --> Tab4["👥 Tab Kelola User (Admin+)"]
+    Dashboard --> GDriveAuth["🔗 Hubungkan Google Drive OAuth"]
+
+    Tab1 -->|Generate PDF| PDFEngine["Docxtemplater + Word Converter"]
+    PDFEngine --> GDriveAPI["☁️ Google Drive API"]
+    PDFEngine --> Download(["📥 Download File PDF"])
+    PDFEngine -->|Simpan Metadata| DataStore
+      </div>
+      <div class="desc-box">
+        <strong>Penjelasan:</strong> Menggambarkan alur data dari antarmuka React JSX ke Express.js backend. Dokumen diproses menggunakan template DOCX (Docxtemplater), dikonversi menjadi PDF melalui VBScript Word COM, diunggah ke Google Drive via OAuth 2.0, serta disimpan ke basis data Supabase (dengan fallback otomatis ke penyimpanan JSON lokal).
+      </div>
+    </div>
+
+    <!-- 2. Autentikasi & RBAC -->
+    <div class="diagram-card" id="tab-1">
+      <div class="card-header">
+        <h2 class="card-title">2. Autentikasi & Hak Akses Berdasarkan Role (RBAC)</h2>
+      </div>
+      <div class="mermaid">
+flowchart TD
+    Start(["Mulai"]) --> InputLogin["Input Username & Password"]
+    InputLogin --> SubmitLogin["Kirim Request POST /api/login"]
+    SubmitLogin --> CheckUser{"User Ditemukan & Password Cocok?"}
+
+    CheckUser -- "Tidak" --> LoginFail["Tampilkan Pesan Error (401)"] --> InputLogin
+    CheckUser -- "Ya" --> CreateSession["Buat Session Cookie (8 Jam)"]
+    CreateSession --> CheckRole{"Identifikasi Role Pengguna"}
+
+    CheckRole -- "staff" --> StaffView["Dashboard Staff:\n- Buat Surat\n- Lihat Riwayat Pribadi"]
+    CheckRole -- "admin" --> AdminView["Dashboard Admin Cabang:\n- Buat Surat\n- Riwayat Cabang\n- Kelola Penandatangan Cabang\n- Kelola User Cabang"]
+    CheckRole -- "superadmin" --> SuperView["Dashboard Superadmin:\n- Buat Surat Lintas Cabang\n- Riwayat Semua Cabang\n- Kelola Penandatangan Global\n- Kelola Semua User"]
+
+    StaffView --> End(["Selesai"])
+    AdminView --> End
+    SuperView --> End
+      </div>
+      <div class="desc-box">
+        <strong>Penjelasan:</strong> Mengatur hak akses 3 tingkat role:
+        <ul>
+          <li><strong>Staff:</strong> Hanya membuat surat dan melihat/menghapus riwayat surat buatannya sendiri.</li>
+          <li><strong>Admin Cabang:</strong> Mengelola user, penandatangan, dan riwayat surat di cabangnya sendiri.</li>
+          <li><strong>Superadmin:</strong> Memiliki akses penuh lintas cabang (global).</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 3. Pembuatan Surat -->
+    <div class="diagram-card" id="tab-2">
+      <div class="card-header">
+        <h2 class="card-title">3. Alur Pembuatan Surat Rekomendasi (Core Process)</h2>
+      </div>
+      <div class="mermaid">
+flowchart TD
+    StartSurat(["User Buka Tab 'Buat Surat'"]) --> FetchInit["Load Penandatangan & Nomor Surat Otomatis\n(GET /api/signatories & GET /api/next-nomor)"]
+    FetchInit --> FillForm["User Mengisi Form Surat:\n- Tempat, Sifat, Lampiran, Hal\n- Tujuan & Lokasi Tujuan\n- Isi Surat & Pilihan Penandatangan"]
+    FillForm --> SubmitSurat["Klik 'Buat & Unduh Surat' (POST /api/generate-surat)"]
+
+    SubmitSurat --> MutexCheck{"Apakah User Sedang Memproses Surat Lain?\n(Active Concurrency Check)"}
+    MutexCheck -- "Ya" --> ErrMutex["Tolak: 429 Too Many Requests"] --> FillForm
+    MutexCheck -- "No" --> DupCheck{"Cek Duplikasi Konten dalam 30 Detik?"}
+
+    DupCheck -- "Ya" --> ErrDup["Tolak: Surat yang sama baru saja dibuat"] --> FillForm
+    DupCheck -- "Tidak" --> ValFields{"Semua Field Wajib Terisi?"}
+
+    ValFields -- "Tidak" --> ErrFields["Tolak: 400 Field Belum Lengkap"] --> FillForm
+    ValFields -- "Ya" --> CheckNomor{"Nomor Surat Kosong / Sudah Dipakai?"}
+
+    CheckNomor -- "Ya" --> GenNewNomor["Generate Nomor Urut Otomatis Baru"]
+    CheckNomor -- "Tidak" --> RenderDocx["Render Template DOCX\n(PizZip + Docxtemplater)"]
+    GenNewNomor --> RenderDocx
+
+    RenderDocx --> SaveTempDocx["Simpan File DOCX Sementara"]
+    SaveTempDocx --> ConvertPDF["Konversi DOCX ke PDF via VBScript / MS Word COM"]
+    ConvertPDF --> DeleteDocx["Hapus File DOCX Sementara"]
+    
+    DeleteDocx --> CheckDrive{"Google Drive Terhubung?"}
+    CheckDrive -- "Ya" --> UploadDrive["Upload PDF ke Google Drive Folder"]
+    CheckDrive -- "Tidak" --> SkipDrive["Lewati Upload Drive"]
+
+    UploadDrive --> SaveHistory["Simpan Riwayat Surat ke Supabase / JSON Store"]
+    SkipDrive --> SaveHistory
+
+    SaveHistory --> StreamPDF["Kirim Stream File PDF ke Browser"]
+    StreamPDF --> DownloadTrigger["Browser Mengunduh File 'Surat_Rekomendasi.pdf'"]
+    DownloadTrigger --> ResetForm["Reset Form & Generate Nomor Surat Baru"]
+    ResetForm --> Selesai(["Selesai"])
+      </div>
+      <div class="desc-box">
+        <strong>Fitur Kunci:</strong> Proteksi konkurensi (Mutex Set), proteksi duplikasi isi 30 detik, penomoran urut otomatis per cabang <code>B-{xxx}/Kw.08.3.5/PP.00.07/{mm}/{yyyy}</code>, dan penghapusan otomatis file temporer server.
+      </div>
+    </div>
+
+    <!-- 4. Riwayat Surat -->
+    <div class="diagram-card" id="tab-3">
+      <div class="card-header">
+        <h2 class="card-title">4. Alur Riwayat Surat & Pagination</h2>
+      </div>
+      <div class="mermaid">
+flowchart TD
+    StartHist(["Buka Tab 'Riwayat Surat'"]) --> FetchHist["Kirim GET /api/history?page=X&limit=10"]
+    FetchHist --> FilterRole{"Filter Riwayat di Backend Sesuai Role"}
+
+    FilterRole -- "Superadmin" --> AllData["Ambil Seluruh Data Riwayat Semua Cabang"]
+    FilterRole -- "Admin" --> BranchData["Filter: Surat dari Cabang Sendiri"]
+    FilterRole -- "Staff" --> UserData["Filter: Surat yang Dibuat Oleh User Sendiri"]
+
+    AllData --> Pagination["Hitung Total Data & Paginate (10 per Halaman)"]
+    BranchData --> Pagination
+    UserData --> Pagination
+
+    Pagination --> RenderTable["Tampilkan Tabel Riwayat di Frontend"]
+    RenderTable --> UserAction{"Aksi Pengguna"}
+
+    UserAction -- "Pencarian Real-Time" --> FilterClient["Filter Baris Berdasarkan Nomor, Hal, Tujuan, Pembuat"]
+    UserAction -- "Buka Drive" --> OpenLink["Buka Link PDF di Tab Baru Google Drive"]
+    UserAction -- "Ganti Halaman" --> ChangePage["Request Page Baru"] --> FetchHist
+    UserAction -- "Hapus Riwayat" --> ConfirmDelete{"Konfirmasi Dialog Hapus?"}
+
+    ConfirmDelete -- "Ya" --> SendDelete["Kirim DELETE /api/history/:id"]
+    SendDelete --> VerifyPerm{"Cek Izin Hapus:\n- Superadmin: Boleh Semua\n- Admin: Boleh Cabang Sendiri\n- Staff: Hanya Milik Sendiri"}
+
+    VerifyPerm -- "Diizinkan" --> DeleteDB["Hapus dari Supabase / JSON"] --> RefreshHist["Muat Ulang Halaman Riwayat"]
+    VerifyPerm -- "Ditolak" --> Err403["Tampilkan Error 403 Forbidden"]
+    ConfirmDelete -- "Batal" --> RenderTable
+      </div>
+      <div class="desc-box">
+        <strong>Penjelasan:</strong> Menangani paginasi data 10 entri per halaman, pencarian instan sisi klien, tautan langsung ke pratinjau PDF Google Drive, dan validasi keamanan saat menghapus riwayat.
+      </div>
+    </div>
+
+    <!-- 5. User & Penandatangan -->
+    <div class="diagram-card" id="tab-4">
+      <div class="card-header">
+        <h2 class="card-title">5. Manajemen Pengguna & Penandatangan</h2>
+      </div>
+      <div class="mermaid">
+flowchart TD
+    StartAdmin(["Admin / Superadmin Akses Tab Penandatangan / User"]) --> SelectTab{"Pilih Tab"}
+
+    subgraph KelolaPenandatangan ["Kelola Penandatangan"]
+        SelectTab -- "Penandatangan" --> ViewSig["Lihat Daftar Penandatangan\n(Superadmin: Semua / Admin: Cabangnya)"]
+        ViewSig --> ActSig{"Aksi Penandatangan"}
+        ActSig -- "Tambah" --> FormSig["Input Jabatan, Nama, NIP, (Cabang jika Superadmin)"]
+        FormSig --> SubmitSig["POST /api/signatories"] --> SaveSig["Simpan ke DB"] --> ViewSig
+        ActSig -- "Hapus" --> DelSig["DELETE /api/signatories/:id"] --> DeleteSigDB["Hapus dari DB"] --> ViewSig
+    end
+
+    subgraph KelolaUser ["Kelola Pengguna"]
+        SelectTab -- "Kelola User" --> ViewUser["Lihat Daftar User\n(Superadmin: Semua / Admin: Cabangnya)"]
+        ViewUser --> ActUser{"Aksi User"}
+        ActUser -- "Tambah" --> FormUser["Input Nama, Username, Password, Role, Cabang"]
+        FormUser --> CheckExist{"Username Sudah Ada?"}
+        CheckExist -- "Ya" --> ErrUser["Error: Username sudah dipakai"]
+        CheckExist -- "Tidak" --> HashPass["Hash Password dengan Bcrypt"]
+        HashPass --> SubmitUser["POST /api/users"] --> SaveUser["Simpan User ke DB"] --> ViewUser
+        ActUser -- "Hapus" --> SelfCheck{"Apakah Menghapus Diri Sendiri?"}
+        SelfCheck -- "Ya" --> BlockDel["Tolak: Tidak bisa hapus akun sendiri"]
+        SelfCheck -- "Tidak" --> DelUser["DELETE /api/users/:id"] --> DeleteUserDB["Hapus User dari DB"] --> ViewUser
+    end
+      </div>
+      <div class="desc-box">
+        <strong>Penjelasan:</strong> Form terintegrasi untuk pendaftaran user baru (dengan enkripsi Bcrypt) dan pejabat penandatangan surat, disertai pencegahan penghapusan akun sendiri (self-deletion protection).
+      </div>
+    </div>
+
+    <!-- 6. Google Drive -->
+    <div class="diagram-card" id="tab-5">
+      <div class="card-header">
+        <h2 class="card-title">6. Integrasi Google Drive OAuth 2.0</h2>
+      </div>
+      <div class="mermaid">
+flowchart TD
+    StartOAuth(["User Klik 'Hubungkan Drive' di Header"]) --> ReqAuth["Akses GET /auth/google"]
+    ReqAuth --> GenAuthURL["Backend Generate URL OAuth2 Google\n(Scope: drive.file, drive)"]
+    GenAuthURL --> RedirectGoogle["Redirect User ke Halaman Izin Akun Google"]
+    
+    RedirectGoogle --> UserConsent{"User Menyetujui Izin Google?"}
+    UserConsent -- "Tidak" --> AuthCancel["Proses Dibatalkan"]
+    UserConsent -- "Ya" --> Callback["Google Redirect ke /oauth2callback?code=XXX"]
+
+    Callback --> ExchangeToken["Backend Menukar Code dengan Access & Refresh Token"]
+    ExchangeToken --> SaveConfig["Simpan Refresh Token ke drive-config.json"]
+    SaveConfig --> SuccessPage["Tampilkan Halaman 'Google Drive Berhasil Terhubung'"]
+    SuccessPage --> ReturnApp["User Kembali ke Aplikasi (Status: Drive Terhubung ✅)"]
+      </div>
+      <div class="desc-box">
+        <strong>Penjelasan:</strong> Alur Google OAuth 2.0 sekali otorisasi untuk mendapatkan <code>refresh_token</code>, memungkinkan aplikasi mengunggah PDF secara otomatis di latar belakang ke Google Drive pengguna.
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>File Markdown lengkap tersedia di <code>flowchart/FLOWCHART.md</code></p>
+    </div>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        primaryColor: '#1e293b',
+        primaryTextColor: '#f8fafc',
+        primaryBorderColor: '#38bdf8',
+        lineColor: '#60a5fa',
+        secondaryColor: '#0f172a',
+        tertiaryColor: '#1e293b'
+      }
+    });
+
+    function switchTab(index) {
+      document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', i === index);
+      });
+      document.querySelectorAll('.diagram-card').forEach((card, i) => {
+        card.classList.toggle('active', i === index);
+      });
+    }
+  </script>
+</body>
+</html>
+
