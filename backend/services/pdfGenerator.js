@@ -1,9 +1,14 @@
 const fs = require("fs");
 const path = require("path");
 
-// Path ke logo resmi Kemenag
+// Path ke aset logo dan font resmi
 const LOGO_PATH = path.join(__dirname, "..", "templates", "kemenag_logo.png");
+const FONTS_DIR = path.join(__dirname, "..", "templates", "fonts");
+
 let logoBase64Cache = null;
+let timesRegularBase64 = null;
+let timesBoldBase64 = null;
+let timesItalicBase64 = null;
 
 function getLogoBase64() {
   if (logoBase64Cache) return logoBase64Cache;
@@ -16,6 +21,32 @@ function getLogoBase64() {
     console.warn("⚠️ Gagal membaca logo Kemenag:", err.message);
   }
   return logoBase64Cache || "";
+}
+
+function getTimesFontsBase64() {
+  if (!timesRegularBase64) {
+    try {
+      const p = path.join(FONTS_DIR, "times.ttf");
+      if (fs.existsSync(p)) timesRegularBase64 = fs.readFileSync(p).toString("base64");
+    } catch {}
+  }
+  if (!timesBoldBase64) {
+    try {
+      const p = path.join(FONTS_DIR, "timesbd.ttf");
+      if (fs.existsSync(p)) timesBoldBase64 = fs.readFileSync(p).toString("base64");
+    } catch {}
+  }
+  if (!timesItalicBase64) {
+    try {
+      const p = path.join(FONTS_DIR, "timesi.ttf");
+      if (fs.existsSync(p)) timesItalicBase64 = fs.readFileSync(p).toString("base64");
+    } catch {}
+  }
+  return {
+    regular: timesRegularBase64,
+    bold: timesBoldBase64,
+    italic: timesItalicBase64,
+  };
 }
 
 /**
@@ -93,10 +124,11 @@ async function launchBrowser() {
 }
 
 /**
- * Menghasilkan HTML surat berstandar resmi A4 Kanwil Kemenag
+ * Menghasilkan HTML surat berstandar resmi A4 Kanwil Kemenag (100% Persis Template DOCX)
  */
 function renderSuratHtml(data, options = {}) {
   const logoSrc = getLogoBase64();
+  const fonts = getTimesFontsBase64();
   const { qrDataUrl, verificationUrl, isDraft = false } = options;
 
   const tempatSurat = data.tempat_surat || "Bandar Lampung";
@@ -146,9 +178,34 @@ function renderSuratHtml(data, options = {}) {
   <meta charset="UTF-8" />
   <title>Surat Rekomendasi - ${nomorSurat}</title>
   <style>
+    ${fonts.regular ? `
+    @font-face {
+      font-family: 'Times New Roman';
+      src: url('data:font/truetype;charset=utf-8;base64,${fonts.regular}') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    ` : `@import url('https://fonts.googleapis.com/css2?family=Tinos:ital,wght@0,400;0,700;1,400;1,700&display=swap');`}
+    ${fonts.bold ? `
+    @font-face {
+      font-family: 'Times New Roman';
+      src: url('data:font/truetype;charset=utf-8;base64,${fonts.bold}') format('truetype');
+      font-weight: bold;
+      font-style: normal;
+    }
+    ` : ''}
+    ${fonts.italic ? `
+    @font-face {
+      font-family: 'Times New Roman';
+      src: url('data:font/truetype;charset=utf-8;base64,${fonts.italic}') format('truetype');
+      font-weight: normal;
+      font-style: italic;
+    }
+    ` : ''}
+
     @page {
-      size: A4;
-      margin: 15mm 20mm 15mm 22mm;
+      size: A4 portrait;
+      margin: 20mm 20mm 20mm 30mm;
     }
 
     * {
@@ -158,7 +215,7 @@ function renderSuratHtml(data, options = {}) {
     }
 
     body {
-      font-family: "Times New Roman", Times, serif;
+      font-family: "Times New Roman", "Tinos", Times, serif;
       font-size: 12pt;
       line-height: 1.35;
       color: #000;
@@ -181,7 +238,7 @@ function renderSuratHtml(data, options = {}) {
       letter-spacing: 4px;
     }
 
-    /* KOP SURAT (3-Kolom Layout untuk Simetri Presisi) */
+    /* KOP SURAT (Tabel 3-Kolom Sesuai Template DOCX) */
     .kop-table {
       width: 100%;
       border-collapse: collapse;
@@ -190,19 +247,19 @@ function renderSuratHtml(data, options = {}) {
     }
 
     .kop-logo-col {
-      width: 80px;
+      width: 82px;
       vertical-align: middle;
       text-align: left;
     }
 
     .kop-logo-col img {
-      width: 76px;
+      width: 78px;
       height: auto;
       display: block;
     }
 
     .kop-spacer-col {
-      width: 80px;
+      width: 82px;
     }
 
     .kop-text-col {
@@ -214,15 +271,14 @@ function renderSuratHtml(data, options = {}) {
       font-size: 14pt;
       font-weight: bold;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      line-height: 1.2;
+      line-height: 1.15;
     }
 
     .kop-line-2 {
       font-size: 13pt;
       font-weight: bold;
       text-transform: uppercase;
-      line-height: 1.2;
+      line-height: 1.15;
     }
 
     .kop-line-3 {
@@ -230,7 +286,7 @@ function renderSuratHtml(data, options = {}) {
       font-weight: bold;
       text-transform: uppercase;
       margin-bottom: 2px;
-      line-height: 1.2;
+      line-height: 1.15;
     }
 
     .kop-line-address {
@@ -248,13 +304,13 @@ function renderSuratHtml(data, options = {}) {
       line-height: 1.2;
     }
 
-    /* Garis Ganda Pemisah Kop Surat */
+    /* Garis Ganda Pemisah Kop Surat (Sesuai Standar Resmi) */
     .kop-divider {
       border: 0;
       border-top: 3px solid #000;
       border-bottom: 1px solid #000;
       height: 4px;
-      margin: 4px 0 14px 0;
+      margin: 4px 0 16px 0;
     }
 
     /* TABEL ATRIBUT SURAT & TANGGAL */
@@ -262,43 +318,44 @@ function renderSuratHtml(data, options = {}) {
       width: 100%;
       border-collapse: collapse;
       table-layout: fixed;
-      margin-bottom: 14px;
+      margin-bottom: 16px;
       font-size: 12pt;
     }
 
     .meta-table td {
       vertical-align: top;
-      padding: 1.5px 0;
+      padding: 1px 0;
     }
 
     .meta-left {
-      width: 56%;
-      padding-right: 12px;
+      width: 55%;
     }
 
     .meta-right {
-      width: 44%;
+      width: 45%;
       text-align: right;
       white-space: nowrap;
+      font-size: 12pt;
     }
 
     .inner-attr-table {
       border-collapse: collapse;
       width: 100%;
+      font-size: 12pt;
     }
 
     .inner-attr-table td {
-      padding: 1.5px 0;
+      padding: 1px 0;
       vertical-align: top;
     }
 
     .attr-label {
-      width: 65px;
+      width: 60px;
       white-space: nowrap;
     }
 
     .attr-sep {
-      width: 12px;
+      width: 14px;
       text-align: center;
       white-space: nowrap;
     }
@@ -307,20 +364,15 @@ function renderSuratHtml(data, options = {}) {
       font-weight: normal;
     }
 
-    .attr-val-nomor {
-      font-size: 12pt;
-      white-space: nowrap;
-    }
-
     /* TUJUAN */
     .destination-section {
-      margin-bottom: 14px;
+      margin-bottom: 16px;
       line-height: 1.35;
       font-size: 12pt;
     }
 
     .destination-section .yth {
-      margin-bottom: 2px;
+      margin-bottom: 1px;
     }
 
     .destination-section .location {
@@ -330,7 +382,6 @@ function renderSuratHtml(data, options = {}) {
     /* SALAM & ISI SURAT */
     .greeting {
       margin-bottom: 10px;
-      font-style: italic;
       font-size: 12pt;
     }
 
@@ -342,20 +393,21 @@ function renderSuratHtml(data, options = {}) {
     }
 
     .paragraph {
-      text-indent: 36px;
+      text-indent: 32px;
       margin-bottom: 10px;
       text-align: justify;
     }
 
     .closing-text {
-      margin-top: 8px;
-      margin-bottom: 16px;
-      text-indent: 36px;
+      margin-top: 10px;
+      margin-bottom: 18px;
+      text-indent: 32px;
       text-align: justify;
       font-size: 12pt;
+      line-height: 1.4;
     }
 
-    /* TANDA TANGAN */
+    /* TANDA TANGAN (Sesuai Posisi Template DOCX) */
     .signature-section {
       width: 100%;
       display: flex;
@@ -366,16 +418,17 @@ function renderSuratHtml(data, options = {}) {
     }
 
     .signature-box {
-      width: 280px;
+      width: 270px;
       text-align: left;
     }
 
     .signature-box .salutation {
       margin-bottom: 2px;
+      font-weight: normal;
     }
 
     .signature-box .position {
-      margin-bottom: 6px;
+      margin-bottom: 4px;
       font-weight: normal;
     }
 
@@ -386,24 +439,26 @@ function renderSuratHtml(data, options = {}) {
     }
 
     .qr-code {
-      width: 76px;
-      height: 76px;
+      width: 82px;
+      height: 82px;
       display: block;
     }
 
     .signature-space {
-      height: 76px;
+      height: 82px;
       margin: 6px 0;
     }
 
     .signature-name {
       font-weight: bold;
       text-decoration: underline;
+      font-size: 12pt;
       margin-top: 4px;
     }
 
     .signature-nip {
-      font-size: 11pt;
+      font-size: 12pt;
+      font-weight: normal;
       margin-top: 2px;
     }
   </style>
@@ -411,7 +466,7 @@ function renderSuratHtml(data, options = {}) {
 <body>
   ${watermarkHtml}
 
-  <!-- KOP SURAT (3-Kolom: Logo | Teks Tengah | Spacer Kanan) -->
+  <!-- KOP SURAT (Logo | Teks Kop Tengah | Spacer Kanan) -->
   <table class="kop-table">
     <tr>
       <td class="kop-logo-col">
@@ -438,7 +493,7 @@ function renderSuratHtml(data, options = {}) {
           <tr>
             <td class="attr-label">Nomor</td>
             <td class="attr-sep">:</td>
-            <td class="attr-val attr-val-nomor">${nomorSurat}</td>
+            <td class="attr-val">${nomorSurat}</td>
           </tr>
           <tr>
             <td class="attr-label">Sifat</td>
@@ -446,7 +501,7 @@ function renderSuratHtml(data, options = {}) {
             <td class="attr-val">${sifat}</td>
           </tr>
           <tr>
-            <td class="attr-label">Lampiran</td>
+            <td class="attr-label">Lamp.</td>
             <td class="attr-sep">:</td>
             <td class="attr-val">${lampiran}</td>
           </tr>
@@ -463,14 +518,14 @@ function renderSuratHtml(data, options = {}) {
     </tr>
   </table>
 
-  <!-- TUJUAN -->
+  <!-- TUJUAN SURAT -->
   <div class="destination-section">
     <div class="yth">Yth. ${tujuan}</div>
     <div>di -</div>
     <div class="location">${lokasiTujuan}</div>
   </div>
 
-  <!-- SALAM & ISI -->
+  <!-- SALAM & ISI SURAT -->
   <div class="greeting">Assalamu'alaikum Wr. Wb.</div>
   
   <div class="content-body">
@@ -481,7 +536,7 @@ function renderSuratHtml(data, options = {}) {
     Demikian surat rekomendasi ini kami sampaikan, atas perhatiannya diucapkan terimakasih.
   </div>
 
-  <!-- TANDA TANGAN RESMI -->
+  <!-- TANDA TANGAN RESMI (Sesuai Template DOCX) -->
   <div class="signature-section">
     <div class="signature-box">
       <div class="salutation">Wassalam,</div>
@@ -513,23 +568,22 @@ async function generateSuratPdf(data, options = {}) {
       format: "A4",
       printBackground: true,
       margin: {
-        top: "15mm",
-        bottom: "15mm",
-        left: "22mm",
-        right: "18mm",
+        top: "20mm",
+        bottom: "20mm",
+        left: "30mm",
+        right: "20mm",
       },
     });
+
     return Buffer.from(pdfBuffer);
   } finally {
-    try {
-      await browser.close();
-    } catch {}
+    await browser.close();
   }
 }
 
 module.exports = {
   renderSuratHtml,
   generateSuratPdf,
-  launchBrowser,
   getLogoBase64,
+  getTimesFontsBase64,
 };
