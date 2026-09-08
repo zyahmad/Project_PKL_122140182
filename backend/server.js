@@ -493,16 +493,57 @@ app.post("/api/surat/draft", requireAuth, requireAdmin, async (req, res) => {
       return res.status(400).json({ error: "Surat yang sudah ditandatangani tidak dapat diedit. Silakan buat versi baru." });
     }
 
+    const tanggalStr = data.tanggal ? formatTanggalIndonesia(data.tanggal) : existing.tanggal;
+    const nomorSurat = data.nomor_surat || existing.nomor_surat;
+
+    // Upload draft ke Google Drive folder draft (jika Google Drive terhubung)
+    let draftDriveResult = null;
+    try {
+      const draftPayload = {
+        nomor_surat: nomorSurat,
+        tempat_surat: data.tempat_surat || existing.data?.tempat_surat || "Bandar Lampung",
+        tanggal: tanggalStr,
+        sifat: data.sifat || existing.data?.sifat || "Biasa",
+        lampiran: data.lampiran || existing.data?.lampiran || "-",
+        hal: data.hal || existing.hal,
+        tujuan: data.tujuan || existing.tujuan,
+        lokasi_tujuan: data.lokasi_tujuan || existing.data?.lokasi_tujuan || "Bandar Lampung",
+        isi_surat: data.isi_surat || existing.data?.isi_surat || "",
+        jabatan_penandatangan: data.jabatan_penandatangan || existing.jabatanPenandatangan,
+        nama_penandatangan: data.nama_penandatangan || existing.namaPenandatangan,
+        nip_penandatangan: data.nip_penandatangan || existing.nipPenandatangan,
+      };
+      const draftPdfBytes = await generateSuratPdf(draftPayload, { isDraft: true });
+      const cleanNomor = (nomorSurat || "Draft").replace(/[/\\?%*:|"<>]/g, "_");
+      const draftPdfName = `Draft_${cleanNomor}_${Date.now()}.pdf`;
+      const draftPdfPath = path.join(OUTPUT_DIR, draftPdfName);
+      try { fs.writeFileSync(draftPdfPath, draftPdfBytes); } catch {}
+
+      draftDriveResult = await uploadPdfToDrive(draftPdfPath, draftPdfName, getDraftFolderId());
+      try { if (fs.existsSync(draftPdfPath)) fs.unlinkSync(draftPdfPath); } catch {}
+    } catch (dErr) {
+      console.warn("⚠️ [Draft Update Upload] Gagal upload draft ke Google Drive:", dErr.message);
+    }
+
+    const updatedData = {
+      ...(existing.data || {}),
+      ...data,
+      ...(draftDriveResult ? {
+        draft_drive_url: draftDriveResult.webViewLink,
+        draft_drive_file_id: draftDriveResult.fileId,
+      } : {}),
+    };
+
     const updated = await store.updateHistoryEntry(id, {
-      nomor_surat: data.nomor_surat || existing.nomor_surat,
+      nomor_surat: nomorSurat,
       hal: data.hal || existing.hal,
       tujuan: data.tujuan || existing.tujuan,
-      tanggal: data.tanggal ? formatTanggalIndonesia(data.tanggal) : existing.tanggal,
+      tanggal: tanggalStr,
       signatoryId: data.signatoryId || existing.signatoryId,
       jabatanPenandatangan: data.jabatan_penandatangan || existing.jabatanPenandatangan,
       namaPenandatangan: data.nama_penandatangan || existing.namaPenandatangan,
       nipPenandatangan: data.nip_penandatangan || existing.nipPenandatangan,
-      data: { ...(existing.data || {}), ...data },
+      data: updatedData,
       status: "DRAFT",
     });
     return res.json({ ok: true, surat: updated });
@@ -520,13 +561,53 @@ app.post("/api/surat/draft", requireAuth, requireAdmin, async (req, res) => {
     nomorSurat = generateNomorSurat(new Date(), history, jenisSurat, branchId);
   }
 
+  const tanggalStr = data.tanggal ? formatTanggalIndonesia(data.tanggal) : formatTanggalIndonesia(new Date().toISOString().slice(0, 10));
+
+  // Upload file Draft ke Google Drive folder draft
+  let draftDriveResult = null;
+  try {
+    const draftPayload = {
+      nomor_surat: nomorSurat,
+      tempat_surat: data.tempat_surat || "Bandar Lampung",
+      tanggal: tanggalStr,
+      sifat: data.sifat || "Biasa",
+      lampiran: data.lampiran || "-",
+      hal: data.hal || "Surat Rekomendasi",
+      tujuan: data.tujuan || "-",
+      lokasi_tujuan: data.lokasi_tujuan || "Bandar Lampung",
+      isi_surat: data.isi_surat || "",
+      jabatan_penandatangan: data.jabatan_penandatangan || "Kepala Bidang",
+      nama_penandatangan: data.nama_penandatangan || "Penandatangan",
+      nip_penandatangan: data.nip_penandatangan || "-",
+    };
+    const draftPdfBytes = await generateSuratPdf(draftPayload, { isDraft: true });
+    const cleanNomor = (nomorSurat || "Draft").replace(/[/\\?%*:|"<>]/g, "_");
+    const draftPdfName = `Draft_${cleanNomor}_${Date.now()}.pdf`;
+    const draftPdfPath = path.join(OUTPUT_DIR, draftPdfName);
+    try { fs.writeFileSync(draftPdfPath, draftPdfBytes); } catch {}
+
+    draftDriveResult = await uploadPdfToDrive(draftPdfPath, draftPdfName, getDraftFolderId());
+    try { if (fs.existsSync(draftPdfPath)) fs.unlinkSync(draftPdfPath); } catch {}
+  } catch (dErr) {
+    console.warn("⚠️ [Draft Upload] Gagal upload draft ke Google Drive:", dErr.message);
+  }
+
+  const updatedData = {
+    ...data,
+    nomor_surat: nomorSurat,
+    ...(draftDriveResult ? {
+      draft_drive_url: draftDriveResult.webViewLink,
+      draft_drive_file_id: draftDriveResult.fileId,
+    } : {}),
+  };
+
   const newEntry = {
     id: crypto.randomUUID(),
     jenisSurat: "Surat Rekomendasi",
     nomor_surat: nomorSurat,
     hal: data.hal || "Surat Rekomendasi",
     tujuan: data.tujuan || "-",
-    tanggal: data.tanggal ? formatTanggalIndonesia(data.tanggal) : formatTanggalIndonesia(new Date().toISOString().slice(0, 10)),
+    tanggal: tanggalStr,
     status: "DRAFT",
     dibuatOleh: user.name,
     userId: user.id,
@@ -535,7 +616,7 @@ app.post("/api/surat/draft", requireAuth, requireAdmin, async (req, res) => {
     jabatanPenandatangan: data.jabatan_penandatangan || "",
     namaPenandatangan: data.nama_penandatangan || "",
     nipPenandatangan: data.nip_penandatangan || "",
-    data: { ...data, nomor_surat: nomorSurat },
+    data: updatedData,
     createdAt: new Date().toISOString(),
   };
 

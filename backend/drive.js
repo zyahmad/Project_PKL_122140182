@@ -218,11 +218,19 @@ async function uploadPdfToDrive(filePath, fileName, targetFolderId = null) {
     };
 
     const res = await drive.files.create({
+      requestBody: fileMetadata,
       resource: fileMetadata,
       media,
       fields: "id, webViewLink, webContentLink",
       supportsAllDrives: true,
     });
+
+    try {
+      await drive.permissions.create({
+        fileId: res.data.id,
+        requestBody: { role: "reader", type: "anyone" },
+      });
+    } catch {}
 
     console.log("☁️ [Google Drive] Berhasil upload ke folder", folderId || "root", ":", res.data.id);
     return {

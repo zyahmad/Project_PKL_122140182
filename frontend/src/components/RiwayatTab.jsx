@@ -257,17 +257,6 @@ export default function RiwayatTab({ user, onEditLetter, onOpenVerify }) {
                             >
                               ⬇️ Unduh
                             </a>
-                            {h.driveUrl && (
-                              <a
-                                href={h.driveUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="badge-drive"
-                                title="Buka berkas surat resmi di Google Drive"
-                              >
-                                ☁️ Google Drive
-                              </a>
-                            )}
                             {h.verificationToken && (
                               <button
                                 type="button"
@@ -352,18 +341,6 @@ export default function RiwayatTab({ user, onEditLetter, onOpenVerify }) {
                             >
                               👁️ Pratinjau
                             </a>
-                            {h.draftDriveUrl && (
-                              <a
-                                href={h.draftDriveUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="badge-drive"
-                                style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.3)' }}
-                                title="Buka berkas draft di Google Drive"
-                              >
-                                ☁️ Drive Draft
-                              </a>
-                            )}
                           </>
                         )}
 
