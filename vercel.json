@@ -6,7 +6,7 @@
     "api/index.js": {
       "memory": 1024,
       "maxDuration": 15,
-      "includeFiles": "backend/templates/**"
+      "includeFiles": "backend/**"
     }
   },
   "rewrites": [
