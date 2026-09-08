@@ -1,15 +1,36 @@
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 const { google } = require("googleapis");
 
 const CONFIG_PATH = path.join(__dirname, "drive-config.json");
-const OAUTH_PATH = path.join(__dirname, "service-account.json.json");
+const TMP_CONFIG_PATH = path.join(os.tmpdir(), "drive-config.json");
 const SA_PATH = path.join(__dirname, "service-account.json");
 
 /**
- * Membaca konfigurasi drive-config.json
+ * Membaca konfigurasi drive-config.json (dari env, tmp, atau file lokal)
  */
 function getDriveConfig() {
+  // Prioritas 1: Dari Environment Variables (Sangat stabil untuk Vercel Serverless)
+  const envRefreshToken = process.env.GOOGLE_DRIVE_REFRESH_TOKEN || process.env.GOOGLE_REFRESH_TOKEN;
+  if (envRefreshToken) {
+    return {
+      folderId: getFolderId(),
+      refreshToken: envRefreshToken,
+      tokens: {
+        refresh_token: envRefreshToken,
+      },
+    };
+  }
+
+  // Prioritas 2: Dari /tmp (jika baru login OAuth di Vercel)
+  if (fs.existsSync(TMP_CONFIG_PATH)) {
+    try {
+      return JSON.parse(fs.readFileSync(TMP_CONFIG_PATH, "utf-8"));
+    } catch {}
+  }
+
+  // Prioritas 3: Dari file lokal drive-config.json
   if (fs.existsSync(CONFIG_PATH)) {
     try {
       return JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
@@ -53,7 +74,32 @@ function sanitizeDriveCredentials(credentials = {}) {
   return next;
 }
 
-function getOAuth2Client() {
+/**
+ * Mendapatkan instance OAuth2 Client
+ * Mendukung Environment Variables (Vercel) dan file lokal (Development)
+ */
+function getOAuth2Client(req) {
+  // 1. Cek Environment Variables (Vercel Production)
+  const clientId = process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_OAUTH_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET || process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+
+  let redirectUri = process.env.GOOGLE_REDIRECT_URI || process.env.GOOGLE_OAUTH_REDIRECT_URI;
+  if (!redirectUri && req) {
+    const host = req.get("host");
+    const protocol = req.protocol === "https" || req.headers["x-forwarded-proto"] === "https" ? "https" : "http";
+    redirectUri = `${protocol}://${host}/oauth2callback`;
+  }
+  if (!redirectUri) {
+    redirectUri = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}/oauth2callback`
+      : "http://localhost:3000/oauth2callback";
+  }
+
+  if (clientId && clientSecret) {
+    return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+  }
+
+  // 2. Cek apakah ada file kredensial lokal
   const possiblePaths = [
     path.join(__dirname, "oauth.json"),
     path.join(__dirname, "service-account.json.json"),
@@ -68,8 +114,8 @@ function getOAuth2Client() {
         const web = parsed.web || parsed.installed;
         if (web && web.client_id) {
           const { client_id, client_secret, redirect_uris } = web;
-          const redirect_uri = (redirect_uris && redirect_uris[0]) || "http://localhost:3000/oauth2callback";
-          return new google.auth.OAuth2(client_id, client_secret, redirect_uri);
+          const uri = redirectUri || (redirect_uris && redirect_uris[0]) || "http://localhost:3000/oauth2callback";
+          return new google.auth.OAuth2(client_id, client_secret, uri);
         }
       } catch {}
     }
@@ -84,7 +130,7 @@ function getDriveClient() {
   const config = getDriveConfig();
   const oauth2Client = getOAuth2Client();
 
-  // Prioritas 1: OAuth2 dengan Refresh Token (Menggunakan Kuota Akun Gmail Pribadi 15 GB)
+  // Prioritas 1: OAuth2 dengan Refresh Token (Akun Gmail Pribadi 15 GB / Workspace)
   const refreshToken = config.refreshToken || (config.tokens && config.tokens.refresh_token);
   if (oauth2Client && refreshToken) {
     const tokenPayload = sanitizeDriveCredentials({
@@ -98,6 +144,17 @@ function getDriveClient() {
   }
 
   // Prioritas 2: Service Account (Drive Bersama / Google Workspace)
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+    try {
+      const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+      const auth = new google.auth.GoogleAuth({
+        credentials,
+        scopes: ["https://www.googleapis.com/auth/drive.file", "https://www.googleapis.com/auth/drive"],
+      });
+      return google.drive({ version: "v3", auth });
+    } catch {}
+  }
+
   if (fs.existsSync(SA_PATH)) {
     try {
       const content = JSON.parse(fs.readFileSync(SA_PATH, "utf-8"));
@@ -126,7 +183,7 @@ async function uploadPdfToDrive(filePath, fileName) {
     const folderId = getFolderId();
 
     if (!drive) {
-      console.warn("⚠️ [Google Drive] Belum terhubung. Akses http://localhost:3000/auth/google untuk menghubungkan akun Gmail Anda.");
+      console.warn("⚠️ [Google Drive] Belum terhubung.");
       return null;
     }
 
@@ -140,55 +197,31 @@ async function uploadPdfToDrive(filePath, fileName) {
       body: fs.createReadStream(filePath),
     };
 
-    const response = await drive.files.create({
-      requestBody: fileMetadata,
-      media: media,
-      supportsAllDrives: true,
-      supportsTeamDrives: true,
+    const res = await drive.files.create({
+      resource: fileMetadata,
+      media,
       fields: "id, webViewLink, webContentLink",
+      supportsAllDrives: true,
     });
 
-    const fileId = response.data.id;
-    const webViewLink = response.data.webViewLink;
-
-    // Buat file dapat dilihat oleh siapa saja yang memiliki link (Anyone with link can view)
-    try {
-      await drive.permissions.create({
-        fileId: fileId,
-        supportsAllDrives: true,
-        supportsTeamDrives: true,
-        requestBody: {
-          role: "reader",
-          type: "anyone",
-        },
-      });
-    } catch (permErr) {
-      console.warn("⚠️ [Google Drive] Gagal mengubah izin file publik:", permErr.message);
-    }
-
-    console.log(`✅ [Google Drive] File ter-upload: ${fileName} (ID: ${fileId})`);
+    console.log("☁️ [Google Drive] Berhasil upload:", res.data.id);
     return {
-      fileId,
-      webViewLink,
-      webContentLink: response.data.webContentLink,
+      fileId: res.data.id,
+      webViewLink: res.data.webViewLink,
+      webContentLink: res.data.webContentLink,
     };
-  } catch (error) {
-    if (error.message && error.message.includes("storage quota")) {
-      console.error("\n❌ [Google Drive Quota Error] Service Account tidak memiliki kuota di folder pribadi.");
-      console.error("👉 SOLUSI: Hubungkan akun Gmail pribadi Anda via http://localhost:3000/auth/google untuk menggunakan kuota 15 GB pribadi.\n");
-    } else {
-      console.error("❌ [Google Drive] Gagal mengunggah file PDF:", error.message);
-    }
+  } catch (err) {
+    console.error("❌ [Google Drive] Gagal upload:", err.message);
     return null;
   }
 }
 
 module.exports = {
-  uploadPdfToDrive,
-  getFolderId,
   getOAuth2Client,
+  getDriveClient,
+  uploadPdfToDrive,
   getDriveConfig,
   sanitizeDriveCredentials,
-  shouldRefreshDriveToken,
   CONFIG_PATH,
+  TMP_CONFIG_PATH,
 };

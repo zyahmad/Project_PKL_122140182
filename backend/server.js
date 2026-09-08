@@ -114,9 +114,30 @@ app.get("/api/me", (req, res) => {
 
 // ---------- Google OAuth Routes ----------
 app.get("/auth/google", (req, res) => {
-  const oauth2Client = getOAuth2Client();
+  const oauth2Client = getOAuth2Client(req);
   if (!oauth2Client) {
-    return res.status(400).send("File kredensial OAuth (oauth.json) tidak ditemukan di backend.");
+    return res.status(400).send(`
+      <!DOCTYPE html>
+      <html lang="id">
+      <head><meta charset="UTF-8"><title>Kredensial Google Drive Belum Diatur</title></head>
+      <body style="font-family: system-ui, sans-serif; display:flex; align-items:center; justify-content:center; min-height:100vh; background:#f5f6f7; margin:0;">
+        <div style="background:#fff; padding:32px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.1); max-width:550px; text-align:left;">
+          <h2 style="color:#b91c1c; margin-top:0;">⚠️ Kredensial OAuth Belum Ditemukan</h2>
+          <p style="color:#4b5563; font-size:14px; line-height:1.6;">
+            Agar Google Drive dapat terhubung di Vercel, tambahkan variabel berikut di <b>Settings > Environment Variables</b> pada Vercel Dashboard:
+          </p>
+          <ul style="color:#374151; font-size:13px; line-height:1.8;">
+            <li><code>GOOGLE_CLIENT_ID</code></li>
+            <li><code>GOOGLE_CLIENT_SECRET</code></li>
+            <li><code>GOOGLE_DRIVE_REFRESH_TOKEN</code></li>
+            <li><code>GOOGLE_DRIVE_FOLDER_ID</code></li>
+          </ul>
+          <p style="color:#6b7280; font-size:13px;">Setelah menambahkan variabel tersebut, lakukan <b>Redeploy</b> di Vercel.</p>
+          <a href="/" style="display:inline-block; margin-top:12px; padding:10px 20px; background:#2563eb; color:#fff; text-decoration:none; border-radius:6px; font-weight:600;">Kembali ke Dashboard</a>
+        </div>
+      </body>
+      </html>
+    `);
   }
   const authUrl = oauth2Client.generateAuthUrl({
     access_type: "offline",
@@ -130,7 +151,7 @@ app.get("/oauth2callback", async (req, res) => {
   const { code } = req.query;
   if (!code) return res.status(400).send("Authorization code tidak ditemukan.");
   try {
-    const oauth2Client = getOAuth2Client();
+    const oauth2Client = getOAuth2Client(req);
     const { tokens } = await oauth2Client.getToken(code);
 
     let config = getDriveConfig();
@@ -138,17 +159,33 @@ app.get("/oauth2callback", async (req, res) => {
     if (tokens.refresh_token) {
       config.refreshToken = tokens.refresh_token;
     }
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+
+    // Coba simpan ke file lokal atau /tmp (untuk lingkungan Vercel)
+    try {
+      fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+    } catch {
+      try {
+        const { TMP_CONFIG_PATH } = require("./drive");
+        fs.writeFileSync(TMP_CONFIG_PATH, JSON.stringify(config, null, 2));
+      } catch {}
+    }
 
     res.send(`
       <!DOCTYPE html>
       <html lang="id">
       <head><meta charset="UTF-8"><title>Google Drive Terhubung</title></head>
       <body style="font-family: system-ui, sans-serif; display:flex; align-items:center; justify-content:center; min-height:100vh; background:#f5f6f7; margin:0;">
-        <div style="background:#fff; padding:40px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.1); text-align:center; max-width:400px;">
+        <div style="background:#fff; padding:40px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.1); text-align:center; max-width:480px;">
           <h2 style="color:#0f5132; margin-top:0;">✅ Google Drive Berhasil Terhubung!</h2>
-          <p style="color:#4b5563; font-size:14px;">Akun Google Drive Anda telah berhasil dihubungkan. File PDF surat akan otomatis diunggah ke Google Drive Anda.</p>
-          <a href="/" style="display:inline-block; margin-top:16px; padding:12px 24px; background:#0f5132; color:#fff; text-decoration:none; border-radius:8px; font-weight:600;">Kembali ke Aplikasi</a>
+          <p style="color:#4b5563; font-size:14px; line-height:1.5;">Akun Google Drive Anda telah berhasil dihubungkan. File PDF surat yang ditandatangani akan otomatis tersimpan di Google Drive.</p>
+          ${tokens.refresh_token ? `
+            <div style="margin-top:16px; text-align:left; background:#f8fafc; border:1px solid #e2e8f0; padding:12px; border-radius:8px;">
+              <p style="margin:0 0 6px 0; font-size:12px; font-weight:bold; color:#475569;">Simpan Permanen di Vercel (Opsional):</p>
+              <p style="margin:0 0 6px 0; font-size:11px; color:#64748b;">Tambahkan ke Vercel Environment Variables: <code>GOOGLE_DRIVE_REFRESH_TOKEN</code></p>
+              <input readonly value="${tokens.refresh_token}" style="width:100%; font-size:11px; padding:6px; background:#fff; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;" onclick="this.select(); document.execCommand('copy'); alert('Token berhasil disalin!');" />
+            </div>
+          ` : ''}
+          <a href="/" style="display:inline-block; margin-top:20px; padding:12px 24px; background:#0f5132; color:#fff; text-decoration:none; border-radius:8px; font-weight:600;">Kembali ke Aplikasi</a>
         </div>
       </body>
       </html>
